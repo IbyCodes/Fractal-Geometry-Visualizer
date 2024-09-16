@@ -38,10 +38,20 @@ struct Parameters { // struct for parameters for user input example
 class MyCallbacks : public CallbackInterface { // can be used to deal with user input
 
 public:
-	MyCallbacks(ShaderProgram& shader) : shader(shader) {}
+	MyCallbacks(ShaderProgram& shader) : shader(shader), fractalType(0){}
 
 	virtual void keyCallback(int key, int scancode, int action, int mods) {
 		if (action == GLFW_PRESS || action == GLFW_REPEAT) { // if we press the right arrow on keyboard, will reload shader
+
+			if (key == GLFW_KEY_0) {  // Load Sin Shape from tutorial
+				fractalType = 0;
+			}
+
+			if (key == GLFW_KEY_1) {  // Load Sierpinski Triangle
+				fractalType = 1;
+			}
+			
+
 			if (key == GLFW_KEY_R) { // if we press R, the image will reload
 				shader.recompile();
 			}
@@ -70,9 +80,14 @@ public:
 		return parameters;
 	}
 
+	int getFractalType() const {
+		return fractalType;
+	}
+
 private:
 	ShaderProgram& shader;
 	Parameters parameters; // parameters is a private variable
+	int fractalType; // to be able to switch fractals
 };
 
 class MyCallbacks2 : public CallbackInterface {
@@ -88,47 +103,13 @@ public:
 };
 // END EXAMPLES (the above things are just example pieces of code)
 
-/*
-std::vector<glm::vec3> sqSpiral(int i){
-	std::vector<glm::vec3> ret;
-	float step = 0.2;
-	bool axis = false;
-	bool direction = false;
-	glm::vec3 currentPos(0., 0., 0.);
-
-	for (int it = 0; it < i; it++){
-		glm::vec3 newpos;
-		if(direction){
-
-			if(axis){
-				newpos = currentPos + glm::vec3(0., step, 0.);
-			}
-			else{
-				newpos = currentPos + glm::vec3(step, 0., 0.);
-			}
-		}
-		else{
-			if (axis){
-				newpos = currentPos + glm::vec3(0., -step, 0.)
-			}
-			else{
-				newpos = currentPos + glm::vec3(-step, 0., 0.)
-			}
-		}
-	}
-	ret.push_back(newpos);
-	currentPos = newpos;
-
-} // then put colours in, etc, etc
-*/
-
 
 CPU_Geometry generateSin(Parameters p) { // originally from main, but now put into own function for cpuGeom stuff. Done for efficiency, will only reload if some difference is detected!
 
 	CPU_Geometry cpuGeom;
 	for (float x = -1.0f; x <= 1.0f; x += 0.01f) {
 		cpuGeom.verts.push_back(glm::vec3(x, sin(x*p.t)*p.u, 0.0));
-		cpuGeom.cols.push_back(glm::vec3(0.6, 0.2, 0.0));
+		cpuGeom.cols.push_back(glm::vec3(sin(x), cos(x), 0.0));
 	}
 	return cpuGeom;
 
@@ -170,7 +151,7 @@ CPU_Geometry generateSierpinski(int iterations) {
 		cpuGeom.verts.push_back(b);
 		cpuGeom.verts.push_back(c);
 
-		// Generate a random color
+		// Generate a random color for each iteration, this bascially separates each triangle by a separate colour
 		glm::vec3 color(static_cast<float>(rand()) / RAND_MAX,
 			static_cast<float>(rand()) / RAND_MAX,
 			static_cast<float>(rand()) / RAND_MAX);
@@ -181,12 +162,8 @@ CPU_Geometry generateSierpinski(int iterations) {
 		cpuGeom.cols.push_back(color);
 
 		};
-		/*	// Add colors for each vertex
-		cpuGeom.cols.push_back(glm::vec3(1.0f, 0.0f, 0.0f)); // Color for vertex a
-		cpuGeom.cols.push_back(glm::vec3(0.0f, 1.0f, 0.0f)); // Color for vertex b
-		cpuGeom.cols.push_back(glm::vec3(0.0f, 0.0f, 1.0f)); // Color for vertex c
-		};
-		*/
+
+		
 
 	// Recursive function to subdivide the triangle
 	std::function<void(glm::vec3, glm::vec3, glm::vec3, int)> divide_triangle = [&](glm::vec3 a, glm::vec3 b, glm::vec3 c, int m) {
@@ -230,36 +207,24 @@ int main() {
 	// CALLBACKS
 	auto callbacks = std::make_shared<MyCallbacks>(shader); // can also update callbacks to new ones
 	window.setCallbacks(callbacks);
-	//window.setCallbacks(std::make_shared<MyCallbacks>(shader)); // can also update callbacks to new ones
+	
 
 	// GEOMETRY
 	CPU_Geometry cpuGeom;
 	GPU_Geometry gpuGeom;
 
-	/*
+	int lastFractalType = 0;
+
+	
 	for (float x = -1.0f; x <= 1.0f; x += 0.01f) {
 		cpuGeom.verts.push_back(glm::vec3(x, sin(x*10)*0.5, 0.0));
 		cpuGeom.cols.push_back(glm::vec3(cos(x), sin(x), 0.0));
 	}
-	*/
 
-
-	/*
-	// vertices
-	cpuGeom.verts.push_back(glm::vec3(-0.5f, -0.5f, 0.f)); // bottom left
-	cpuGeom.verts.push_back(glm::vec3(0.5f, -0.5f, 0.f)); // bottom right
-	cpuGeom.verts.push_back(glm::vec3(0.f, 0.5f, 0.f)); // top of triangle
-
-	// colours (these should be in linear space)
-	cpuGeom.cols.push_back(glm::vec3(1.f, 0.f, 0.f));
-	cpuGeom.cols.push_back(glm::vec3(0.f, 1.f, 0.f));
-	cpuGeom.cols.push_back(glm::vec3(0.f, 0.f, 1.f));
-
-	*/
 
 	Parameters p;
-	// cpuGeom = generateSin(p);
-	cpuGeom = generateSierpinski(p.iterations);
+	cpuGeom = generateSin(p); // to initially load something, we'll start with the sin 
+	//cpuGeom = generateSierpinski(p.iterations);
 	// uploading data to gpu from cpu (note here we're uploading BEFORE THE LOOP, because in this example we're just redrawing the same traingle over and over again)
 	gpuGeom.setVerts(cpuGeom.verts);
 	gpuGeom.setCols(cpuGeom.cols);
@@ -272,21 +237,37 @@ int main() {
 		glfwPollEvents();
 
 		Parameters newP = callbacks->getParameters();
+		int currentFractalType = callbacks->getFractalType();
 
-		/*
-		if (newP.isDifferent(p)) { // if difference detected, then we will reupload things
-			p = newP;
-			cpuGeom = generateSin(p);
-			gpuGeom.setVerts(cpuGeom.verts);
-			gpuGeom.setCols(cpuGeom.cols);
+		if (currentFractalType != lastFractalType) {
+			if (currentFractalType == 0) {
+				for (float x = -1.0f; x <= 1.0f; x += 0.01f) {
+					cpuGeom.verts.push_back(glm::vec3(x, sin(x * 10) * 0.5, 0.0));
+					cpuGeom.cols.push_back(glm::vec3(cos(x), sin(x), 0.0));
+				}
+				cpuGeom = generateSin(p);
+			}
+			else if (currentFractalType == 1) {
+				cpuGeom = generateSierpinski(p.iterations);
+			}
 		}
-		*/
 
-		if (newP.iterations != p.iterations) {
-			p = newP;
-			cpuGeom = generateSierpinski(p.iterations);
-			gpuGeom.setVerts(cpuGeom.verts);
-			gpuGeom.setCols(cpuGeom.cols);
+		if (currentFractalType == 0) {
+			if (newP.isDifferent(p)) { // if difference detected, then we will reupload things
+				p = newP;
+				cpuGeom = generateSin(p);
+				gpuGeom.setVerts(cpuGeom.verts);
+				gpuGeom.setCols(cpuGeom.cols);
+			}
+		}
+
+		if (currentFractalType == 1) {
+			if (newP.iterations != p.iterations) {
+				p = newP;
+				cpuGeom = generateSierpinski(p.iterations);
+				gpuGeom.setVerts(cpuGeom.verts);
+				gpuGeom.setCols(cpuGeom.cols);
+			}
 		}
 
 		shader.use(); // tells us to use the shader we loaded in earlier on
@@ -294,7 +275,15 @@ int main() {
 
 		glEnable(GL_FRAMEBUFFER_SRGB); // tells us to use the srgb color space, flag used (OpenGL is a global state machine)
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // clearing the current buffers (2, have to clear both). Two buffers, each split into 3 parts, R, G, B, R, G, B
-		glDrawArrays(GL_TRIANGLES, 0, GLsizei(cpuGeom.verts.size())); // drawing on the buffer
+
+		if (currentFractalType == 0) {
+			glDrawArrays(GL_LINE_STRIP, 0, GLsizei(cpuGeom.verts.size())); // drawing on the buffer
+		}
+
+		if (currentFractalType == 1) {
+			glDrawArrays(GL_TRIANGLES, 0, GLsizei(cpuGeom.verts.size())); // drawing on the buffer
+		}
+
 		glDisable(GL_FRAMEBUFFER_SRGB); // disable sRGB for things like imgui
 
 		window.swapBuffers(); // we're using a dual buffer system, so once we're done drawing on one buffer we swap it
