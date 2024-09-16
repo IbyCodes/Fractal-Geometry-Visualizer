@@ -26,7 +26,7 @@ struct Parameters { // struct for parameters for user input example
 	float t = 1.0f;
 	float u = 0.0f;
 
-	bool isDifferent(Parameters p) { // for efficiency reasons, will check to see if any change was made (with the arrows from the user controlling them)
+	bool isDifferent(Parameters p) { // parameter for sin wave, for efficiency reasons, will check to see if any change was made (with the arrows from the user controlling them)
 		return p.t != t || p.u != u;
 	}
 
@@ -49,6 +49,10 @@ public:
 
 			if (key == GLFW_KEY_1) {  // Load Sierpinski Triangle
 				fractalType = 1;
+			}
+
+			if (key == GLFW_KEY_2) {  // Load Pythagoras Tree
+				fractalType = 2;
 			}
 			
 
@@ -192,6 +196,76 @@ CPU_Geometry generateSierpinski(int iterations) {
 }
 
 
+CPU_Geometry generatePythagorasTree(int iterations) {
+	CPU_Geometry cpuGeom;
+
+	// Function to draw a square
+	auto draw_square = [&](const glm::vec3& bl, const glm::vec3& br, const glm::vec3& tr, const glm::vec3& tl) {
+		// Add vertices in counterclockwise order
+		cpuGeom.verts.push_back(bl);
+		cpuGeom.verts.push_back(br);
+		cpuGeom.verts.push_back(tr);
+		cpuGeom.verts.push_back(tr);
+		cpuGeom.verts.push_back(tl);
+		cpuGeom.verts.push_back(bl);
+
+		// Generate a random color for the square
+		glm::vec3 color(static_cast<float>(rand()) / RAND_MAX,
+			static_cast<float>(rand()) / RAND_MAX,
+			static_cast<float>(rand()) / RAND_MAX);
+		for (int i = 0; i < 6; ++i) {
+			cpuGeom.cols.push_back(color);
+		}
+		};
+
+	// Recursive function to build the Pythagoras Tree
+	std::function<void(glm::vec3, glm::vec3, glm::vec3, glm::vec3, int)> add_tree = [&](glm::vec3 bl, glm::vec3 br, glm::vec3 tr, glm::vec3 tl, int depth) {
+		if (depth == 0) {
+			return;
+		}
+
+		// Draw the current square
+		draw_square(bl, br, tr, tl);
+
+		// Calculate the size of the new squares (should be sqrt(0.5) of the current square's side)
+		glm::vec3 top_center = (tr + tl) * 0.5f;
+		float new_size = glm::length(tr - tl) * sqrt(0.5f);
+
+		// Vectors for new squares' orientation
+		glm::vec3 left_dir = glm::normalize(tl - bl);
+		glm::vec3 right_dir = glm::normalize(tr - br);
+
+		// Calculate corners for the left branch (45-degree rotation)
+		glm::vec3 new_tl_left = tl;
+		glm::vec3 new_tr_left = new_tl_left + left_dir * new_size;
+		glm::vec3 new_br_left = new_tl_left + left_dir * new_size + right_dir * new_size;
+		glm::vec3 new_bl_left = new_tl_left + right_dir * new_size;
+
+		// Calculate corners for the right branch (-45-degree rotation)
+		glm::vec3 new_tr_right = tr;
+		glm::vec3 new_tl_right = new_tr_right - right_dir * new_size;
+		glm::vec3 new_bl_right = new_tr_right - right_dir * new_size - left_dir * new_size;
+		glm::vec3 new_br_right = new_tr_right - left_dir * new_size;
+
+		// Recursively add the branches
+		add_tree(new_bl_left, new_br_left, new_tr_left, new_tl_left, depth - 1);
+		add_tree(new_bl_right, new_br_right, new_tr_right, new_tl_right, depth - 1);
+		};
+
+	// Start the tree with the base square
+	glm::vec3 p1(-0.1f, -0.5f, 0.f); // bottom left
+	glm::vec3 p2(0.1f, -0.5f, 0.f);  // bottom right
+	glm::vec3 p3(0.1f, -0.3f, 0.f);  // top right
+	glm::vec3 p4(-0.1f, -0.3f, 0.f); // top left
+
+	// Begin the recursive drawing
+	add_tree(p1, p2, p3, p4, iterations);
+
+	return cpuGeom;
+}
+
+
+
 int main() {
 	Log::debug("Starting main");
 
@@ -225,13 +299,14 @@ int main() {
 	Parameters p;
 	cpuGeom = generateSin(p); // to initially load something, we'll start with the sin 
 	//cpuGeom = generateSierpinski(p.iterations);
+
+
 	// uploading data to gpu from cpu (note here we're uploading BEFORE THE LOOP, because in this example we're just redrawing the same traingle over and over again)
 	gpuGeom.setVerts(cpuGeom.verts);
 	gpuGeom.setCols(cpuGeom.cols);
 
 	// RENDER LOOP
 	// Keeps running until user decides to press esc or something
-
 	// this loop runs EVERY frame
 	while (!window.shouldClose()) {
 		glfwPollEvents();
@@ -249,6 +324,9 @@ int main() {
 			}
 			else if (currentFractalType == 1) {
 				cpuGeom = generateSierpinski(p.iterations);
+			}
+			else if (currentFractalType == 2) {
+				cpuGeom = generatePythagorasTree(p.iterations);
 			}
 		}
 
@@ -270,24 +348,37 @@ int main() {
 			}
 		}
 
-		shader.use(); // tells us to use the shader we loaded in earlier on
-		gpuGeom.bind(); // tells us to use the gpu geometry we loaded in earlier on
-
-		glEnable(GL_FRAMEBUFFER_SRGB); // tells us to use the srgb color space, flag used (OpenGL is a global state machine)
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // clearing the current buffers (2, have to clear both). Two buffers, each split into 3 parts, R, G, B, R, G, B
-
-		if (currentFractalType == 0) {
-			glDrawArrays(GL_LINE_STRIP, 0, GLsizei(cpuGeom.verts.size())); // drawing on the buffer
+		if (currentFractalType == 2) {
+			if (newP.iterations != p.iterations) {
+				p = newP;
+				cpuGeom = generatePythagorasTree(p.iterations);
+				gpuGeom.setVerts(cpuGeom.verts);
+				gpuGeom.setCols(cpuGeom.cols);
+			}
 		}
 
-		if (currentFractalType == 1) {
-			glDrawArrays(GL_TRIANGLES, 0, GLsizei(cpuGeom.verts.size())); // drawing on the buffer
+			shader.use(); // tells us to use the shader we loaded in earlier on
+			gpuGeom.bind(); // tells us to use the gpu geometry we loaded in earlier on
+
+			glEnable(GL_FRAMEBUFFER_SRGB); // tells us to use the srgb color space, flag used (OpenGL is a global state machine)
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // clearing the current buffers (2, have to clear both). Two buffers, each split into 3 parts, R, G, B, R, G, B
+
+			if (currentFractalType == 0) {
+				glDrawArrays(GL_LINE_STRIP, 0, GLsizei(cpuGeom.verts.size())); // drawing on the buffer
+			}
+
+			if (currentFractalType == 1) {
+				glDrawArrays(GL_TRIANGLES, 0, GLsizei(cpuGeom.verts.size())); // drawing on the buffer
+			}
+
+			if (currentFractalType == 2) {
+				glDrawArrays(GL_TRIANGLES, 0, GLsizei(cpuGeom.verts.size())); // drawing on the buffer
+			}
+
+			glDisable(GL_FRAMEBUFFER_SRGB); // disable sRGB for things like imgui
+
+			window.swapBuffers(); // we're using a dual buffer system, so once we're done drawing on one buffer we swap it
 		}
-
-		glDisable(GL_FRAMEBUFFER_SRGB); // disable sRGB for things like imgui
-
-		window.swapBuffers(); // we're using a dual buffer system, so once we're done drawing on one buffer we swap it
-	}
 
 	// NOTE: openGL likes a counter-clockwise order format, so try to draw vertices via counter-clockwise order
 	// theres several things you can draw. Some examples:
