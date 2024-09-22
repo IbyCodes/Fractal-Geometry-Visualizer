@@ -531,66 +531,62 @@ glm::vec3 calculateKochTip(const glm::vec3& A, const glm::vec3& B) {
 CPU_Geometry generateKochSnowflake(int depth) {
 	CPU_Geometry cpuGeom;
 
-	// Initial triangle vertices (an equilateral triangle)
-	glm::vec3 p1(-0.5f, -0.5f, 0.f);
-	glm::vec3 p2(0.5f, -0.5f, 0.f);
-	glm::vec3 p3(0.f, 0.5f, 0.f);
+	// Initial triangle vertices (equilateral triangle)
+	glm::vec3 p1(-0.5f, -0.5f, 0.f);  // bottom-left
+	glm::vec3 p2(0.5f, -0.5f, 0.f);   // bottom-right
+	glm::vec3 p3(0.f, sqrt(3.0f) / 2.0f - 0.5f, 0.f);  // top vertex of the equilateral triangle
 
-	// Function to draw a single triangle by pushing its vertices
-	auto draw_triangle = [&](const glm::vec3& a, const glm::vec3& b, const glm::vec3& c) {
-		cpuGeom.verts.push_back(a); // bottom left
-		cpuGeom.verts.push_back(b); // bottom right
-		cpuGeom.verts.push_back(c); // top
+	// Defining a set of colors for different depths
+	std::vector<glm::vec3> colors = {
+		glm::vec3(1.0f, 0.0f, 0.0f),  // Red
+		glm::vec3(0.0f, 1.0f, 0.0f),  // Green
+		glm::vec3(0.0f, 0.0f, 1.0f),  // Blue
+		glm::vec3(1.0f, 1.0f, 0.0f),  // Yellow
+		glm::vec3(0.0f, 1.0f, 1.0f),  // Cyan
+		glm::vec3(1.0f, 0.0f, 1.0f),  // Magenta
+		// Add more colors if needed for more depth
+	};
 
-		glm::vec3 colorOne = glm::vec3(0.0f, 0.0f, 1.0f); // blue
-		glm::vec3 colorTwo = glm::vec3(0.0f, 1.0f, 0.0f); // green
-		glm::vec3 colorThree = glm::vec3(1.0f, 0.0f, 0.0f); // red
 
-		// Add the same color for all three vertices of the triangle
-		cpuGeom.cols.push_back(colorOne);
-		cpuGeom.cols.push_back(colorTwo);
-		cpuGeom.cols.push_back(colorThree);
-		};
+	// Recursive function to divide and create the Koch snowflake
+	std::function<void(glm::vec3, glm::vec3, int)> divideKoch = [&](glm::vec3 a, glm::vec3 b, int m) {
+		if (m > 0) {
+			// Calculate 1/3 and 2/3 points along the line
+			glm::vec3 P1 = a + (b - a) / 3.0f;           // 1/3 point
+			glm::vec3 P2 = a + (b - a) * 2.0f / 3.0f;    // 2/3 point
 
-	// Recursive function to subdivide the triangle
-	std::function<void(glm::vec3, glm::vec3, int)> divideSnowflake = [&](glm::vec3 a, glm::vec3 b, int m) {
-		if (m > 0) { // where m is the iteration level
+			// Direction of the line from P1 to P2
+			glm::vec3 dir = P2 - P1;
 
-			// Find points 1/3 and 2/3 the way along the side
-			glm::vec3 P1 = a + (b - a) * (1.0f / 3.0f); // 1/3 of the way from A to B
-			glm::vec3 P2 = a + (b - a) * (2.0f / 3.0f); // 2/3 of the way from A to B
+			// Perpendicular vector to the segment, rotated 60 degrees outward
+			glm::vec3 Ppeak(
+				P1.x + dir.x * 0.5f + dir.y * sqrt(3.0f) / 2.0f,   // Rotate counter-clockwise
+				P1.y - dir.x * sqrt(3.0f) / 2.0f + dir.y * 0.5f,
+				0.0f
+			);
 
-			// Calculate the vector perpendicular to the side (to create the "bump")
-			glm::vec3 dir = b - a;
-			glm::vec3 perp(-dir.y, dir.x, 0); // Perpendicular vector in 2D
-
-			// Normalize perpendicular vector and scale by the appropriate height
-			perp = glm::normalize(perp) * (glm::length(dir) / 3.0f) * (sqrt(3.0f) / 6.0f);
-
-			// Reverse the direction of the bump to go outward
-			glm::vec3 P3 = (P1 + P2) / 2.0f - perp;
-
-			// Recursively divide the new segments
-			divideSnowflake(a, P1, m - 1); // Left segment
-			divideSnowflake(P1, P3, m - 1); // Left to peak
-			divideSnowflake(P3, P2, m - 1); // Peak to right
-			divideSnowflake(P2, b, m - 1); // Right segment
+			// Recursively subdivide each segment
+			divideKoch(a, P1, m - 1);   // Segment 1
+			divideKoch(P1, Ppeak, m - 1);  // Segment 2 with peak
+			divideKoch(Ppeak, P2, m - 1);  // Segment 3
+			divideKoch(P2, b, m - 1);   // Segment 4
 		}
 		else {
-			// Draw the line when the recursion depth is zero
+			// If recursion depth is reached, add final vertices to geometry
 			cpuGeom.verts.push_back(a);
 			cpuGeom.verts.push_back(b);
 
-			// Add colors (can alternate colors or use the same for all points)
-			cpuGeom.cols.push_back(glm::vec3(1.0f, 0.0f, 0.0f)); // Red
-			cpuGeom.cols.push_back(glm::vec3(0.0f, 1.0f, 0.0f)); // Green
+			// Add color information for visualization
+			glm::vec3 color(1.0f, 1.0f, 0.0f);  // yellow lines
+			cpuGeom.cols.push_back(color);
+			cpuGeom.cols.push_back(color);
 		}
 		};
 
-	// Recursively divide each side of the triangle
-	divideSnowflake(p1, p2, depth);
-	divideSnowflake(p2, p3, depth);
-	divideSnowflake(p3, p1, depth);
+	// Start the recursive subdivision for each side of the initial triangle
+	divideKoch(p1, p2, depth);  // First side
+	divideKoch(p2, p3, depth);  // Second side
+	divideKoch(p3, p1, depth);  // Third side
 
 	return cpuGeom;
 }
