@@ -690,6 +690,60 @@ CPU_Geometry generateDragonCurve(int iterations) {
 	CPU_Geometry cpuGeom;
 
 	bool right = true;
+	std::vector<glm::vec2> array;
+
+	// Initial coordinates and colors
+	array.push_back(glm::vec2(-0.7, 0.2)); // Start point
+	array.push_back(glm::vec2(0.5, 0.2));  // End point
+	glm::vec3 startColor(0.0, 0.6, 0.9);
+	glm::vec3 endColor(1.0, 0.4, 0.1);
+
+	std::vector<glm::vec3> colorPalette = {
+		glm::vec3(1.0, 0.0, 0.0), // Red
+		glm::vec3(0.0, 1.0, 0.0), // Green
+		glm::vec3(0.0, 0.0, 1.0), // Blue
+		glm::vec3(1.0, 1.0, 0.0), // Yellow
+		glm::vec3(0.0, 1.0, 1.0), // Cyan
+		glm::vec3(1.0, 0.0, 1.0)  // Magenta
+	};
+
+	int mode = 0;
+
+	// Loop through the number of iterations requested
+	while (iterations > 1) {
+		for (int index = 0; index < array.size() - 1; index += 2) {
+			if (!right) {
+				array.insert(array.begin() + index + 1, plotLeft(array.at(index), array.at(index + 1), mode));
+				right = true;
+			}
+			else {
+				array.insert(array.begin() + index + 1, plotRight(array.at(index), array.at(index + 1), mode));
+				right = false;
+			}
+			mode += 2;
+		}
+		mode++;
+		iterations--;
+	}
+
+	// Apply X-axis mirroring (invert X coordinates) and apply colors
+	float size = array.size();
+	for (int i = 0; i < array.size(); i++) {
+		glm::vec2 point = array[i];
+		point.x = -point.x;  // Flip the X coordinate
+		cpuGeom.verts.push_back(glm::vec3(point.x, point.y, 0.f));
+		cpuGeom.cols.push_back(colorPalette[i % colorPalette.size()]);
+	}
+
+	return cpuGeom;
+}
+
+
+/*
+CPU_Geometry generateDragonCurve(int iterations) {
+	CPU_Geometry cpuGeom;
+
+	bool right = true;
 	std::vector<glm::vec2> array; // Declare a vector of glm::vec2
 
 	// initial coordinates and colors
@@ -749,7 +803,7 @@ CPU_Geometry generateDragonCurve(int iterations) {
 	return cpuGeom;
 
 }
-
+*/
 
 
 
