@@ -61,6 +61,10 @@ public:
 			if (key == GLFW_KEY_3) {  // Load Koch Snowflake
 				fractalType = 3;
 			}
+
+			if (key == GLFW_KEY_4) {
+				fractalType = 4;
+			}
 			
 
 			if (key == GLFW_KEY_R) { // if we press R, the image will reload
@@ -68,7 +72,7 @@ public:
 			}
 			if (key == GLFW_KEY_UP) { // if we press the up arrow the 't' parameter will increase a little
 				parameters.t += parameters.tStep;
-				parameters.iterations = std::min(parameters.iterations + 1, 10); // Cap at 10 iterations
+				parameters.iterations = std::min(parameters.iterations + 1, 15); // Cap at 15 iterations
 			}
 
 			if (key == GLFW_KEY_DOWN) { // if we press the down arrow the 't' parameter will decrease a little
@@ -536,24 +540,22 @@ CPU_Geometry generateKochSnowflake(int depth) {
 	glm::vec3 p2(0.5f, -0.5f, 0.f);   // bottom-right
 	glm::vec3 p3(0.f, sqrt(3.0f) / 2.0f - 0.5f, 0.f);  // top vertex of the equilateral triangle
 
-	// Defining a set of colors for different depths
+	// Define a set of colors for different iterations
 	std::vector<glm::vec3> colors = {
 		glm::vec3(1.0f, 0.0f, 0.0f),  // Red
 		glm::vec3(0.0f, 1.0f, 0.0f),  // Green
 		glm::vec3(0.0f, 0.0f, 1.0f),  // Blue
 		glm::vec3(1.0f, 1.0f, 0.0f),  // Yellow
-		glm::vec3(0.0f, 1.0f, 1.0f),  // Cyan
 		glm::vec3(1.0f, 0.0f, 1.0f),  // Magenta
-		// Add more colors if needed for more depth
+		glm::vec3(0.0f, 1.0f, 1.0f)   // Cyan
 	};
 
-
-	// Recursive function to divide and create the Koch snowflake
+	// Recursive function to divide and create the Koch snowflake with changing colors (sort of similar to Serpinsi triangle)
 	std::function<void(glm::vec3, glm::vec3, int)> divideKoch = [&](glm::vec3 a, glm::vec3 b, int m) {
 		if (m > 0) {
 			// Calculate 1/3 and 2/3 points along the line
-			glm::vec3 P1 = a + (b - a) / 3.0f;           // 1/3 point
-			glm::vec3 P2 = a + (b - a) * 2.0f / 3.0f;    // 2/3 point
+			glm::vec3 P1 = a + (b - a) / 3.0f;           // 1/3 of side point
+			glm::vec3 P2 = a + (b - a) * 2.0f / 3.0f;    // 2/3 of side point
 
 			// Direction of the line from P1 to P2
 			glm::vec3 dir = P2 - P1;
@@ -565,7 +567,7 @@ CPU_Geometry generateKochSnowflake(int depth) {
 				0.0f
 			);
 
-			// Recursively subdivide each segment
+			// Recursively subdividing each segment
 			divideKoch(a, P1, m - 1);   // Segment 1
 			divideKoch(P1, Ppeak, m - 1);  // Segment 2 with peak
 			divideKoch(Ppeak, P2, m - 1);  // Segment 3
@@ -576,10 +578,10 @@ CPU_Geometry generateKochSnowflake(int depth) {
 			cpuGeom.verts.push_back(a);
 			cpuGeom.verts.push_back(b);
 
-			// Add color information for visualization
-			glm::vec3 color(1.0f, 1.0f, 0.0f);  // yellow lines
-			cpuGeom.cols.push_back(color);
-			cpuGeom.cols.push_back(color);
+			// Assign color based on current depth (one color per new peak)
+			//glm::vec3 color = colors[depth % colors.size()];  // Cycle through colors
+			cpuGeom.cols.push_back(colors[3]);
+			cpuGeom.cols.push_back(colors[3]);
 		}
 		};
 
@@ -591,6 +593,162 @@ CPU_Geometry generateKochSnowflake(int depth) {
 	return cpuGeom;
 }
 
+
+/*
+CPU_Geometry generateDragonCurve(int iterations) {
+	// Initial two points forming the first line segment
+
+	CPU_Geometry cpuGeom;
+
+	std::vector<glm::vec2> points;
+
+	glm::vec2 start(-0.5f, 0.0f);
+	glm::vec2 end(0.5f, 0.0f);
+
+	points.push_back(start);
+	points.push_back(end);
+
+	// For each iteration, update the point set
+	for (int iter = 0; iter < iterations; iter++) {
+		int n = points.size();
+		glm::vec2 midpoint = (points[n - 1] + points[0]) / 2.0f;  // Find midpoint of the last segment
+
+		std::vector<glm::vec2> newPoints;
+
+		// Copy existing points and apply 90-degree rotation
+		for (int i = 0; i < n; i++) {
+			glm::vec2 newPoint;
+			// Rotate by 90 degrees around the midpoint
+			newPoint.x = midpoint.x + (points[i].y - midpoint.y);
+			newPoint.y = midpoint.y - (points[i].x - midpoint.x);
+			newPoints.push_back(newPoint);
+		}
+
+		// Append the rotated points to the original set
+		points.insert(points.end(), newPoints.rbegin(), newPoints.rend());
+	}
+
+	// Convert points into CPU_Geometry
+	for (const auto& p : points) {
+		cpuGeom.verts.push_back(glm::vec3(p, 0.0f));  // Convert 2D point to 3D (z = 0)
+
+		// Assign a color for each iteration (for simplicity, just using white)
+		cpuGeom.cols.push_back(glm::vec3(1.0f, 1.0f, 1.0f));  // White color for now
+	}
+
+	return cpuGeom;
+}
+*/
+
+
+
+
+glm::vec2 plotLeft(glm::vec2 pointA, glm::vec2 pointB, int mode) {
+	// calculate midpoint of A and B
+	glm::vec2 midpoint((pointA.x + pointB.x) / 2, (pointA.y + pointB.y) / 2);
+	// calculate the change in each dimension
+	glm::vec2 delta = midpoint - pointA;
+
+	// depending on which mode we're in, calcluate the extrusion on the left
+	if (mode % 4 == 0)
+		return glm::vec2(midpoint.x, midpoint.y + delta.x);
+	if (mode % 4 == 1)
+		return glm::vec2(pointA.x, pointB.y);
+	if (mode % 4 == 2)
+		return glm::vec2(midpoint.x - delta.y, midpoint.y);
+	if (mode % 4 == 3)
+		return glm::vec2(pointB.x, pointA.y);
+
+	// this is here for bug catching
+	// under normal circumstances this should never be returned
+	return glm::vec2(2.0, 2.0);
+}
+
+glm::vec2 plotRight(glm::vec2 pointA, glm::vec2 pointB, int mode) {
+	// calculate midpoint of A and B
+	glm::vec2 midpoint((pointA.x + pointB.x) / 2, (pointA.y + pointB.y) / 2);
+	// calculate the change in each dimension
+	glm::vec2 delta = midpoint - pointA;
+
+	// depending on which mode we're in, calcluate the extrusion on the right
+	if (mode % 4 == 0)
+		return glm::vec2(midpoint.x, midpoint.y - delta.x);
+	if (mode % 4 == 1)
+		return glm::vec2(pointB.x, pointA.y);
+	if (mode % 4 == 2)
+		return glm::vec2(midpoint.x + delta.y, midpoint.y);
+	if (mode % 4 == 3)
+		return glm::vec2(pointA.x, pointB.y);
+
+	// this is here for bug catching
+	// under normal circumstances, this should never be returned
+	return glm::vec2(2.0, 2.0);
+}
+
+
+CPU_Geometry generateDragonCurve(int iterations) {
+	CPU_Geometry cpuGeom;
+
+	bool right = true;
+	std::vector<glm::vec2> array; // Declare a vector of glm::vec2
+
+	// initial coordinates and colors
+	array.push_back(glm::vec2(-0.7, 0.2));
+	array.push_back(glm::vec2(0.5, 0.2));
+	glm::vec3 startColor(0.0, 0.6, 0.9);
+	glm::vec3 endColor(1.0, 0.4, 0.1);
+
+	std::vector<glm::vec3> colorPalette = {
+	glm::vec3(1.0, 0.0, 0.0), // Red
+	glm::vec3(0.0, 1.0, 0.0), // Green
+	glm::vec3(0.0, 0.0, 1.0), // Blue
+	glm::vec3(1.0, 1.0, 0.0), // Yellow
+	glm::vec3(0.0, 1.0, 1.0), // Cyan
+	glm::vec3(1.0, 0.0, 1.0)  // Magenta
+	};
+
+	
+	// there are 4 "modes" to aid with folding calculations
+	// the mode tells the function which way the line is propagating, so it know which way to extrude
+	// Mode 0 = west/east
+	// Mode 1 = northeast/southwest
+	// Mode 2 = north/south
+	// Mode 3 = northwest/southeast
+	int mode = 0;
+	while (iterations > 1) {
+		// iterate through the vector of values, use adjacent values to calculate intermediate values and insert them back into the vector
+		for (int index = 0; index < array.size() - 1; index += 2) {
+			// alternate between turning left and right
+			if (right) {
+				array.insert(array.begin() + index + 1, plotRight(array.at(index), array.at(index + 1), mode));
+				right = false;
+			}
+			else if (!right) {
+				array.insert(array.begin() + index + 1, plotLeft(array.at(index), array.at(index + 1), mode));
+				right = true;
+			}
+			// a 90 turn = a mode shift of 2
+			mode += 2;
+		}
+		// shift the mode to prepare for the next level
+		mode++;
+		iterations--;
+	}
+
+	// draw all points and blend between two colors
+	float size = array.size();
+	for (int i = 0; i < array.size(); i++) {
+		cpuGeom.verts.push_back(glm::vec3(array[i].x, array[i].y, 0.f));
+		//cpuGeom.cols.push_back(startColor * (1 - (i / size)) + endColor * (i / size));
+
+		 // Cycle through colors in the palette
+		cpuGeom.cols.push_back(colorPalette[i % colorPalette.size()]);
+	}
+
+
+	return cpuGeom;
+
+}
 
 
 
@@ -661,6 +819,10 @@ int main() {
 			else if (currentFractalType == 3) {
 				cpuGeom = generateKochSnowflake(p.iterations);
 			}
+
+			else if (currentFractalType == 4) {
+				cpuGeom = generateDragonCurve(p.iterations);
+			}
 		}
 
 		if (currentFractalType == 0) {
@@ -699,6 +861,15 @@ int main() {
 			}
 		}
 
+		if (currentFractalType == 4) {
+			if (newP.iterations != p.iterations) {
+				p = newP;
+				cpuGeom = generateDragonCurve(p.iterations);
+				gpuGeom.setVerts(cpuGeom.verts);
+				gpuGeom.setCols(cpuGeom.cols);
+			}
+		}
+
 			shader.use(); // tells us to use the shader we loaded in earlier on
 			gpuGeom.bind(); // tells us to use the gpu geometry we loaded in earlier on
 
@@ -719,6 +890,10 @@ int main() {
 
 			if (currentFractalType == 3) {
 				glDrawArrays(GL_LINE_LOOP , 0, GLsizei(cpuGeom.verts.size())); // drawing on the buffer (snowflake)
+			}
+
+			if (currentFractalType == 4) {
+				glDrawArrays(GL_LINE_STRIP, 0, GLsizei(cpuGeom.verts.size())); // drawing on the buffer (dragon curve)
 			}
 
 			glDisable(GL_FRAMEBUFFER_SRGB); // disable sRGB for things like imgui
