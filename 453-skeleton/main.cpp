@@ -19,8 +19,9 @@
 #include <cstdlib>  // For rand() and RAND_MAX
 #include <glm/glm.hpp>
 #include <cmath>
-
-
+#include <vector>
+#include <functional>
+#include <glm/gtc/matrix_transform.hpp> // For transformations
 
 struct Parameters { // struct for parameters for user input example
 	float tStep = 0.1f;
@@ -209,6 +210,9 @@ CPU_Geometry generateSierpinski(int iterations) {
 
 
 
+
+// best attempt
+
 CPU_Geometry generatePythagorasTree(int iterations) {
 	CPU_Geometry cpuGeom;
 	
@@ -216,13 +220,12 @@ CPU_Geometry generatePythagorasTree(int iterations) {
 	auto draw_square = [&](const glm::vec3& bl, const glm::vec3& br, const glm::vec3& tr, const glm::vec3& tl) {
 		// Add vertices in counterclockwise order
 		 // First triangle (bottom left, bottom right, top left)
-
-		
 		cpuGeom.verts.push_back(bl); // first triangle
 		cpuGeom.verts.push_back(br);
 		cpuGeom.verts.push_back(tr);
 
-		cpuGeom.verts.push_back(tr); // 2nd triangle
+
+		cpuGeom.verts.push_back(tr); // 2nd triangle (two right triangles create a square)
 		cpuGeom.verts.push_back(tl);
 		cpuGeom.verts.push_back(bl);
 		
@@ -261,65 +264,103 @@ CPU_Geometry generatePythagorasTree(int iterations) {
 		// NOTE: TL TR, BL, BR ARE ALL (X,Y,Z) COORDINATES
 		// Calculate the size of the new squares
 
-		float hypotenuseLength = (tr.x - tl.x);
-		float new_square_side_length = hypotenuseLength * (sqrt(2.0f) / 2.0f); // s = (root2)/2 * h, this will be one side length of each of the new squares
+		float hypotenuseLengthOdd = (tr.x - tl.x);
+		float new_square_side_lengthOdd = hypotenuseLengthOdd * (sqrt(2.0f) / 2.0f); // s = (root2)/2 * h, this will be one side length of each of the new squares
+
+		float hypotenuseLengthEven = sqrt((tr.x - tl.x) * (tr.x - tl.x) + (tr.y - tl.y) * (tr.y - tl.y));
+		float new_square_side_lengthEven = hypotenuseLengthEven * (sqrt(2.0f) / 2.0f); // s = (root2)/2 * h, this will be one side length of each of the new squares
+
 
 		glm::vec3 new_bl_left, new_br_left, new_tr_left, new_tl_left;
 		glm::vec3 new_bl_right, new_br_right, new_tr_right, new_tl_right;
-		
-		if (depth % 2 == 1) { // if depth is odd .
+
+
+
+		if (depth % 2 == 1) { // if depth is odd . // GOOD
 			// Calculate vertice sides for the left branch square (-45-degree rotation)
 			new_bl_left = tl;
 
-			new_br_left = glm::vec3(tl.x + (hypotenuseLength / 2), (tl.y + (hypotenuseLength / 2)), 0.f);
+			new_br_left = glm::vec3(tl.x + (hypotenuseLengthOdd / 2), (tl.y + (hypotenuseLengthOdd / 2)), 0.f);
 
-			 new_tl_left = glm::vec3(tl.x - (hypotenuseLength / 2), (tl.y + (hypotenuseLength / 2)), 0.f);
+			new_tl_left = glm::vec3(tl.x - (hypotenuseLengthOdd / 2), (tl.y + (hypotenuseLengthOdd / 2)), 0.f);
 
-			new_tr_left= glm::vec3(tl.x, tl.y + hypotenuseLength, 0.f);
+			new_tr_left= glm::vec3(tl.x, tl.y + hypotenuseLengthOdd, 0.f);
+
 
 		}
 
-		else { // if depth is even
+		else { // if depth is EVEN 
 
 			// Calculate vertice sides for the left branch square (note that now its already at a 45% angle, so i need to change offsets accordingly
-			new_bl_left = tl; // good
 
-			new_br_left = glm::vec3(tr.x-new_square_side_length, tl.y + new_square_side_length, 0.f); // good
+			// left side-left square
+			new_bl_left = tl; 
 
-			new_tl_left = glm::vec3(tl.x - new_square_side_length, tl.y, 0.f); // good
+			new_br_left = glm::vec3(tl.x, tl.y + new_square_side_lengthEven, 0.f); 
 
-			new_tr_left = glm::vec3(tl.x - new_square_side_length, tl.y + new_square_side_length, 0.f); // good
+			new_tl_left = glm::vec3(tl.x - new_square_side_lengthEven, tl.y, 0.f);
 
+
+			new_tr_left = glm::vec3(tl.x - new_square_side_lengthEven, tl.y + new_square_side_lengthEven, 0.f);
+
+
+
+			// left side- right square
+			new_bl_right = glm::vec3(tl.x, (tl.y + new_square_side_lengthEven), 0.f);
+
+			new_br_right = tr;
+
+			new_tl_right = glm::vec3(tl.x, tl.y + (new_square_side_lengthEven*2), 0.f);
+
+			new_tr_right = glm::vec3(tr.x, tr.y + new_square_side_lengthEven, 0.f);
+
+
+			
 		}
 
 		// Draw the left branch square
 		draw_square(new_bl_left, new_br_left, new_tr_left, new_tl_left);
 
-		if (depth % 2 == 1) { // if depth is odd (right branch)
 
-			// Calculate sides for the right branch square (+45-degree rotation)
 
-			new_bl_right = glm::vec3(tl.x + (hypotenuseLength / 2), (tr.y + (hypotenuseLength / 2)), 0.f);
+
+
+		if (depth % 2 == 1) { // if depth is odd (right branch) 
+
+			// Calculating sides for the right branch square (+45-degree rotation)
+
+			new_bl_right = glm::vec3(tl.x + (hypotenuseLengthOdd / 2), (tr.y + (hypotenuseLengthOdd / 2)), 0.f);
 
 			new_br_right = tr;
 
-			new_tl_right = glm::vec3(tr.x, tr.y + hypotenuseLength, 0.f);
+			new_tl_right = glm::vec3(tr.x, tr.y + hypotenuseLengthOdd, 0.f);
 
-			new_tr_right = glm::vec3(tr.x + (hypotenuseLength / 2), (tr.y + (hypotenuseLength / 2)), 0.f);
-
+			new_tr_right = glm::vec3(tr.x + (hypotenuseLengthOdd / 2), (tr.y + (hypotenuseLengthOdd / 2)), 0.f);
 
 
 		}
 
 
-		else {
-			new_bl_right = glm::vec3(tl.x + new_square_side_length, tl.y, 0.f); // good?
+		else { // if depth is even
 
-			new_br_right = (tr); // good
+			// right side-left square
+			new_bl_left = tl;
 
-			new_tl_right = glm::vec3(tr.x + new_square_side_length, tr.y + new_square_side_length, 0.f); // good
+			new_br_left = glm::vec3(tl.x + new_square_side_lengthEven, tl.y, 0.f);
 
-			new_tr_right = glm::vec3(tr.x + new_square_side_length, tr.y, 0.f); // good
+			new_tl_left = glm::vec3(tl.x, tl.y + new_square_side_lengthEven, 0.f);
+
+			new_tr_left = glm::vec3(tl.x + new_square_side_lengthEven, tl.y + new_square_side_lengthEven, 0.f);
+
+
+			// right side-right square
+			new_bl_right = glm::vec3(tl.x + new_square_side_lengthEven, tl.y, 0.f); 
+
+			new_br_right = (tr); 
+
+			new_tl_right = glm::vec3(tr.x + new_square_side_lengthEven, tr.y + new_square_side_lengthEven, 0.f); // good
+
+			new_tr_right = glm::vec3(tr.x + new_square_side_lengthEven, tr.y, 0.f); // good
 
 
 		}
@@ -352,6 +393,121 @@ CPU_Geometry generatePythagorasTree(int iterations) {
 	return cpuGeom;
 
 }
+
+
+
+
+
+/*
+// Function to draw a square
+void draw_square(CPU_Geometry& cpuGeom, const glm::vec3& bl, const glm::vec3& br, const glm::vec3& tr, const glm::vec3& tl) {
+	// First triangle (bl, br, tr)
+	cpuGeom.verts.push_back(bl);
+	cpuGeom.verts.push_back(br);
+	cpuGeom.verts.push_back(tr);
+
+	// Second triangle (tr, tl, bl)
+	cpuGeom.verts.push_back(tr);
+	cpuGeom.verts.push_back(tl);
+	cpuGeom.verts.push_back(bl);
+
+	// Generate random color for the square
+	glm::vec3 color(static_cast<float>(rand()) / RAND_MAX,
+		static_cast<float>(rand()) / RAND_MAX,
+		static_cast<float>(rand()) / RAND_MAX);
+	for (int i = 0; i < 6; ++i) {
+		cpuGeom.cols.push_back(color);
+	}
+}
+
+// Helper function to rotate a 2D point (around Z-axis) by a given angle
+glm::vec3 rotate_point_around_pivot(const glm::vec3& point, const glm::vec3& pivot, float angle) {
+	float cos_theta = cos(angle);
+	float sin_theta = sin(angle);
+
+	// Translate point to origin (relative to pivot), apply rotation, then translate back
+	glm::vec3 translated = point - pivot;
+	glm::vec3 rotated(
+		translated.x * cos_theta - translated.y * sin_theta,
+		translated.x * sin_theta + translated.y * cos_theta,
+		translated.z // z remains unchanged
+	);
+	return rotated + pivot;
+}
+
+// Recursive function to draw the Pythagoras Tree
+void draw_tree(CPU_Geometry& cpuGeom, glm::vec3 bl, glm::vec3 br, glm::vec3 tr, glm::vec3 tl, int iteration) {
+	if (iteration == 0) {
+		return;
+	}
+
+	// Draw the current square
+	draw_square(cpuGeom, bl, br, tr, tl);
+
+	// Side length of the current square
+	float side_length = glm::length(tr - tl);
+
+	// New side length for the smaller squares
+	float new_side_length = side_length * (sqrt(2.0f) / 2.0f);
+
+	// Calculate the center of the top side (between tr and tl)
+	glm::vec3 top_center = (tr + tl) * 0.5f;
+
+	// Calculate new top-left square vertices (rotated +45 degrees)
+	glm::vec3 left_tl = tl;
+	glm::vec3 left_tr = top_center;
+	glm::vec3 left_bl = rotate_point_around_pivot(left_tl, tl, glm::radians(45.0f));
+	glm::vec3 left_br = rotate_point_around_pivot(left_tr, tl, glm::radians(45.0f));
+
+	// Calculate new top-right square vertices (rotated -45 degrees)
+	glm::vec3 right_tl = top_center;
+	glm::vec3 right_tr = tr;
+	glm::vec3 right_bl = rotate_point_around_pivot(right_tl, tr, glm::radians(-45.0f));
+	glm::vec3 right_br = rotate_point_around_pivot(right_tr, tr, glm::radians(-45.0f));
+
+	// Recursively draw left and right squares
+	draw_tree(cpuGeom, left_bl, left_br, left_tr, left_tl, iteration - 1);
+	draw_tree(cpuGeom, right_bl, right_br, right_tr, right_tl, iteration - 1);
+}
+
+CPU_Geometry generatePythagorasTree(int iterations) {
+	CPU_Geometry cpuGeom;
+
+	// Function to draw a square
+	auto draw_square = [&](const glm::vec3& bl, const glm::vec3& br, const glm::vec3& tr, const glm::vec3& tl) {
+		// Add vertices in counterclockwise order (two triangles per square)
+		cpuGeom.verts.push_back(bl); // First triangle
+		cpuGeom.verts.push_back(br);
+		cpuGeom.verts.push_back(tr);
+
+		cpuGeom.verts.push_back(tr); // Second triangle
+		cpuGeom.verts.push_back(tl);
+		cpuGeom.verts.push_back(bl);
+
+		// Generate a random color for the square
+		glm::vec3 color(static_cast<float>(rand()) / RAND_MAX,
+			static_cast<float>(rand()) / RAND_MAX,
+			static_cast<float>(rand()) / RAND_MAX);
+		for (int i = 0; i < 6; ++i) {
+			cpuGeom.cols.push_back(color);
+		}
+		};
+
+	// Starting the tree with the base square
+	glm::vec3 p1(-0.1f, -0.5f, 0.f); // bottom left
+	glm::vec3 p2(0.1f, -0.5f, 0.f);  // bottom right
+	glm::vec3 p3(0.1f, -0.3f, 0.f);  // top right
+	glm::vec3 p4(-0.1f, -0.3f, 0.f); // top left
+
+	// Draw the initial square
+	draw_square(p1, p2, p3, p4);
+
+	// Start the recursive drawing
+	draw_tree(cpuGeom, p1, p2, p3, p4, iterations);
+
+	return cpuGeom;
+}
+*/
 
 
 
@@ -642,63 +798,55 @@ CPU_Geometry generateDragonCurve(int iterations) {
 
 
 
+glm::vec2 computeLeftPoint(glm::vec2 startPoint, glm::vec2 endPoint, int direction) {
+	// Find the midpoint between startPoint and endPoint
+	glm::vec2 midPoint((startPoint.x + endPoint.x) / 2, (startPoint.y + endPoint.y) / 2);
+	// Calculate the difference in coordinates between the midpoint and startPoint
+	glm::vec2 offset = midPoint - startPoint;
 
-glm::vec2 plotLeft(glm::vec2 pointA, glm::vec2 pointB, int mode) {
-	// calculate midpoint of A and B
-	glm::vec2 midpoint((pointA.x + pointB.x) / 2, (pointA.y + pointB.y) / 2);
-	// calculate the change in each dimension
-	glm::vec2 delta = midpoint - pointA;
+	// Depending on the direction, compute the point that extends to the left
+	if (direction % 4 == 0)
+		return glm::vec2(midPoint.x, midPoint.y + offset.x);
+	if (direction % 4 == 1)
+		return glm::vec2(startPoint.x, endPoint.y);
+	if (direction % 4 == 2)
+		return glm::vec2(midPoint.x - offset.y, midPoint.y);
+	if (direction % 4 == 3)
+		return glm::vec2(endPoint.x, startPoint.y);
 
-	// depending on which mode we're in, calcluate the extrusion on the left
-	if (mode % 4 == 0)
-		return glm::vec2(midpoint.x, midpoint.y + delta.x);
-	if (mode % 4 == 1)
-		return glm::vec2(pointA.x, pointB.y);
-	if (mode % 4 == 2)
-		return glm::vec2(midpoint.x - delta.y, midpoint.y);
-	if (mode % 4 == 3)
-		return glm::vec2(pointB.x, pointA.y);
-
-	// this is here for bug catching
-	// under normal circumstances this should never be returned
-	return glm::vec2(2.0, 2.0);
 }
 
-glm::vec2 plotRight(glm::vec2 pointA, glm::vec2 pointB, int mode) {
-	// calculate midpoint of A and B
-	glm::vec2 midpoint((pointA.x + pointB.x) / 2, (pointA.y + pointB.y) / 2);
-	// calculate the change in each dimension
-	glm::vec2 delta = midpoint - pointA;
+glm::vec2 computeRightPoint(glm::vec2 startPoint, glm::vec2 endPoint, int direction) {
+	// Find the midpoint between startPoint and endPoint
+	glm::vec2 midPoint((startPoint.x + endPoint.x) / 2, (startPoint.y + endPoint.y) / 2);
+	// Calculate the difference in coordinates between the midpoint and startPoint
+	glm::vec2 offset = midPoint - startPoint;
 
-	// depending on which mode we're in, calcluate the extrusion on the right
-	if (mode % 4 == 0)
-		return glm::vec2(midpoint.x, midpoint.y - delta.x);
-	if (mode % 4 == 1)
-		return glm::vec2(pointB.x, pointA.y);
-	if (mode % 4 == 2)
-		return glm::vec2(midpoint.x + delta.y, midpoint.y);
-	if (mode % 4 == 3)
-		return glm::vec2(pointA.x, pointB.y);
+	// Depending on the direction, compute the point that extends to the right
+	if (direction % 4 == 0)
+		return glm::vec2(midPoint.x, midPoint.y - offset.x);
+	if (direction % 4 == 1)
+		return glm::vec2(endPoint.x, startPoint.y);
+	if (direction % 4 == 2)
+		return glm::vec2(midPoint.x + offset.y, midPoint.y);
+	if (direction % 4 == 3)
+		return glm::vec2(startPoint.x, endPoint.y);
 
-	// this is here for bug catching
-	// under normal circumstances, this should never be returned
-	return glm::vec2(2.0, 2.0);
 }
 
+CPU_Geometry generateDragonCurve(int interations) {
 
-CPU_Geometry generateDragonCurve(int iterations) {
-	CPU_Geometry cpuGeom;
+	CPU_Geometry cpuGeometry;
 
-	bool right = true;
-	std::vector<glm::vec2> array;
+	bool turnRight = true;
+	std::vector<glm::vec2> pointsList;
 
-	// Initial coordinates and colors
-	array.push_back(glm::vec2(-0.7, 0.2)); // Start point
-	array.push_back(glm::vec2(0.5, 0.2));  // End point
-	glm::vec3 startColor(0.0, 0.6, 0.9);
-	glm::vec3 endColor(1.0, 0.4, 0.1);
+	// Starting points for the curve
+	pointsList.push_back(glm::vec2(-0.7, 0.2)); // Initial point
+	pointsList.push_back(glm::vec2(0.5, 0.2));  // Final point
 
-	std::vector<glm::vec3> colorPalette = {
+	// Define the color palette for the curve
+	std::vector<glm::vec3> colors = {
 		glm::vec3(1.0, 0.0, 0.0), // Red
 		glm::vec3(0.0, 1.0, 0.0), // Green
 		glm::vec3(0.0, 0.0, 1.0), // Blue
@@ -707,36 +855,39 @@ CPU_Geometry generateDragonCurve(int iterations) {
 		glm::vec3(1.0, 0.0, 1.0)  // Magenta
 	};
 
-	int mode = 0;
+	int direction = 0;
 
-	// Loop through the number of iterations requested
-	while (iterations > 1) {
-		for (int index = 0; index < array.size() - 1; index += 2) {
-			if (!right) {
-				array.insert(array.begin() + index + 1, plotLeft(array.at(index), array.at(index + 1), mode));
-				right = true;
+	// Loop through the number of steps to build the curve
+	while (interations > 1) {
+		for (int index = 0; index < pointsList.size() - 1; index += 2) {
+			if (!turnRight) {
+				// Insert the point on the left side
+				pointsList.insert(pointsList.begin() + index + 1, computeLeftPoint(pointsList.at(index), pointsList.at(index + 1), direction));
+				turnRight = true;
 			}
 			else {
-				array.insert(array.begin() + index + 1, plotRight(array.at(index), array.at(index + 1), mode));
-				right = false;
+				// Insert the point on the right side
+				pointsList.insert(pointsList.begin() + index + 1, computeRightPoint(pointsList.at(index), pointsList.at(index + 1), direction));
+				turnRight = false;
 			}
-			mode += 2;
+			direction += 2;
 		}
-		mode++;
-		iterations--;
+		direction++;
+		interations--;
 	}
 
-	// Apply X-axis mirroring (invert X coordinates) and apply colors
-	float size = array.size();
-	for (int i = 0; i < array.size(); i++) {
-		glm::vec2 point = array[i];
-		point.x = -point.x;  // Flip the X coordinate
-		cpuGeom.verts.push_back(glm::vec3(point.x, point.y, 0.f));
-		cpuGeom.cols.push_back(colorPalette[i % colorPalette.size()]);
+	
+	// Flip the X-axis and apply colors to the points
+	for (int i = 0; i < pointsList.size(); i++) {
+		glm::vec2 currentPoint = pointsList[i];
+		currentPoint.x = -currentPoint.x;  // Invert X-coordinate
+		cpuGeometry.verts.push_back(glm::vec3(currentPoint.x, currentPoint.y, 0.f));
+		cpuGeometry.cols.push_back(colors[i % colors.size()]);
 	}
 
-	return cpuGeom;
+	return cpuGeometry;
 }
+
 
 
 /*
