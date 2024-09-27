@@ -19,9 +19,11 @@
 #include <cstdlib>  // For rand() and RAND_MAX
 #include <glm/glm.hpp>
 #include <cmath>
+#define M_PI 3.14159265358979323846
 #include <vector>
 #include <functional>
 #include <glm/gtc/matrix_transform.hpp> // For transformations
+#include <stack>
 
 struct Parameters { // struct for parameters for user input example
 	float tStep = 0.1f;
@@ -73,7 +75,7 @@ public:
 			}
 			if (key == GLFW_KEY_UP) { // if we press the up arrow the 't' parameter will increase a little
 				parameters.t += parameters.tStep;
-				parameters.iterations = std::min(parameters.iterations + 1, 15); // Cap at 15 iterations
+				parameters.iterations = std::min(parameters.iterations + 1, 11); // Cap at 11 iterations
 			}
 
 			if (key == GLFW_KEY_DOWN) { // if we press the down arrow the 't' parameter will decrease a little
@@ -211,11 +213,122 @@ CPU_Geometry generateSierpinski(int iterations) {
 
 
 
-// best attempt
 
+
+
+
+
+
+
+
+
+
+
+// (FIGURED OUT SIZE OF SQUARES, PERFECT SIZES)
 CPU_Geometry generatePythagorasTree(int iterations) {
 	CPU_Geometry cpuGeom;
 	
+	// Function to draw a square
+	auto draw_square = [&](const glm::vec3& bl, const glm::vec3& br, const glm::vec3& tr, const glm::vec3& tl) {
+		// Add vertices in counterclockwise order
+		// 
+		 // First triangle (bottom left, bottom right, top left)    
+		cpuGeom.verts.push_back(bl); // first right triangle
+		cpuGeom.verts.push_back(br);
+		cpuGeom.verts.push_back(tr);
+
+		cpuGeom.verts.push_back(tr); // 2nd triangle (two right triangles create a square)
+		cpuGeom.verts.push_back(tl);
+		cpuGeom.verts.push_back(bl);
+
+		// Generates a random color for the square (I'll fix this later)
+		glm::vec3 color(static_cast<float>(rand()) / RAND_MAX,
+			static_cast<float>(rand()) / RAND_MAX,
+			static_cast<float>(rand()) / RAND_MAX);
+		for (int i = 0; i < 6; ++i) {
+			cpuGeom.cols.push_back(color);
+		}
+		};
+
+
+	// Recursive function to build the Pythagoras Tree 
+	std::function<void(glm::vec3, glm::vec3, glm::vec3, glm::vec3, int, float)> add_tree = [&](glm::vec3 bl, glm::vec3 br, glm::vec3 tr, glm::vec3 tl, int depth, float oldSideLength) {
+		if (depth <= 0) {
+			draw_square(bl, br, tr, tl); // don't want program to crash so we'll just draw a square if this is the case
+			return;
+		}
+
+		draw_square(bl, br, tr, tl); // draw initial square
+
+		// Convert angle from degrees to radians ( i think C++ prefers rad over degrees)
+		float angle_radLeft = -45.0f * (M_PI / 180.0f);
+		float angle_radRight = 45.0f * (M_PI / 180.0f);
+
+
+		float newSideLength = (sqrt(2) / 2) * oldSideLength; // the new side length of the next iteration of the squares to be drawn (basically scaling the square down per iteration)
+
+
+
+		// Rotating and translating to find the new square position for left branch
+
+		glm::vec3 new_bl_left = tl; // always true
+
+		glm::vec3 new_br_left = tl + (newSideLength * glm::vec3(cos(angle_radLeft), sin(angle_radLeft), 0.f));  // point + vector = point, translation of point P by deltaV
+
+		glm::vec3 new_tr_left = new_br_left + (newSideLength * glm::vec3(-sin(angle_radLeft), cos(angle_radLeft), 0.f)); // point + vector = point
+
+		glm::vec3 new_tl_left = new_bl_left + (newSideLength * glm::vec3(-sin(angle_radLeft), cos(angle_radLeft), 0.f)); // point + vector = point
+
+		// drawing the left square
+		draw_square(new_bl_left, new_br_left, new_tr_left, new_tl_left);
+
+
+		// Rotating and translating to find the new square position for right branch
+
+		glm::vec3 new_bl_right = tr; // always true
+
+		glm::vec3 new_br_right = tr + (newSideLength * glm::vec3(cos(angle_radRight), sin(angle_radRight), 0.f)); // point + vector = point, translation of point P by deltaV
+
+		glm::vec3 new_tr_right = new_br_right + (newSideLength * glm::vec3(-sin(angle_radRight), cos(angle_radRight), 0.f)); // point + vector = point, translation of point P by deltaV
+
+		glm::vec3 new_tl_right = new_bl_right + (newSideLength * glm::vec3(-sin(angle_radRight), cos(angle_radRight), 0.f)); // point + vector = point, translation of point P by deltaV
+
+		// Drawing the right square
+		draw_square(new_bl_right, new_br_right, new_tr_right, new_tl_right);
+		
+
+		
+		// Recursively add the branches per new square 
+		add_tree(new_bl_left, new_br_left, new_tr_left, new_tl_left, depth - 1, newSideLength);
+		add_tree(new_bl_right, new_br_right, new_tr_right, new_tl_right, depth - 1, newSideLength);
+
+
+		};
+
+
+	// Starting the tree with the base square
+	glm::vec3 p1(-0.1f, -0.5f, 0.f); // bottom left
+	glm::vec3 p2(0.1f, -0.5f, 0.f);  // bottom right
+	glm::vec3 p3(0.1f, -0.3f, 0.f);  // top right
+	glm::vec3 p4(-0.1f, -0.3f, 0.f); // top left
+
+	// Draw the initial square
+	draw_square(p1, p2, p3, p4);
+
+	float initialSideLength = p3.x - p4.x; // at the start ONLY! This is the initial length we start with (the top side of the square)
+
+	// Begin the recursive drawing
+	add_tree(p1, p2, p3, p4, iterations, initialSideLength);
+
+	return cpuGeom;
+
+}
+
+// best attempt
+/*
+CPU_Geometry generatePythagorasTree(int iterations) {
+	CPU_Geometry cpuGeom;
+
 	// Function to draw a square
 	auto draw_square = [&](const glm::vec3& bl, const glm::vec3& br, const glm::vec3& tr, const glm::vec3& tl) {
 		// Add vertices in counterclockwise order
@@ -228,7 +341,7 @@ CPU_Geometry generatePythagorasTree(int iterations) {
 		cpuGeom.verts.push_back(tr); // 2nd triangle (two right triangles create a square)
 		cpuGeom.verts.push_back(tl);
 		cpuGeom.verts.push_back(bl);
-		
+
 
 		// Generates a random color for the square (I'll fix this later)
 		glm::vec3 color(static_cast<float>(rand()) / RAND_MAX,
@@ -284,7 +397,7 @@ CPU_Geometry generatePythagorasTree(int iterations) {
 
 			new_tl_left = glm::vec3(tl.x - (hypotenuseLengthOdd / 2), (tl.y + (hypotenuseLengthOdd / 2)), 0.f);
 
-			new_tr_left= glm::vec3(tl.x, tl.y + hypotenuseLengthOdd, 0.f);
+			new_tr_left = glm::vec3(tl.x, tl.y + hypotenuseLengthOdd, 0.f);
 
 
 		}
@@ -294,9 +407,9 @@ CPU_Geometry generatePythagorasTree(int iterations) {
 			// Calculate vertice sides for the left branch square (note that now its already at a 45% angle, so i need to change offsets accordingly
 
 			// left side-left square
-			new_bl_left = tl; 
+			new_bl_left = tl;
 
-			new_br_left = glm::vec3(tl.x, tl.y + new_square_side_lengthEven, 0.f); 
+			new_br_left = glm::vec3(tl.x, tl.y + new_square_side_lengthEven, 0.f);
 
 			new_tl_left = glm::vec3(tl.x - new_square_side_lengthEven, tl.y, 0.f);
 
@@ -310,12 +423,12 @@ CPU_Geometry generatePythagorasTree(int iterations) {
 
 			new_br_right = tr;
 
-			new_tl_right = glm::vec3(tl.x, tl.y + (new_square_side_lengthEven*2), 0.f);
+			new_tl_right = glm::vec3(tl.x, tl.y + (new_square_side_lengthEven * 2), 0.f);
 
 			new_tr_right = glm::vec3(tr.x, tr.y + new_square_side_lengthEven, 0.f);
 
 
-			
+
 		}
 
 		// Draw the left branch square
@@ -354,9 +467,9 @@ CPU_Geometry generatePythagorasTree(int iterations) {
 
 
 			// right side-right square
-			new_bl_right = glm::vec3(tl.x + new_square_side_lengthEven, tl.y, 0.f); 
+			new_bl_right = glm::vec3(tl.x + new_square_side_lengthEven, tl.y, 0.f);
 
-			new_br_right = (tr); 
+			new_br_right = (tr);
 
 			new_tl_right = glm::vec3(tr.x + new_square_side_lengthEven, tr.y + new_square_side_lengthEven, 0.f); // good
 
@@ -369,7 +482,7 @@ CPU_Geometry generatePythagorasTree(int iterations) {
 		draw_square(new_bl_right, new_br_right, new_tr_right, new_tl_right);
 
 
-		
+
 		// Recursively add the branches
 		add_tree(new_bl_left, new_br_left, new_tr_left, new_tl_left, depth - 1);
 		add_tree(new_bl_right, new_br_right, new_tr_right, new_tl_right, depth - 1);
@@ -393,8 +506,7 @@ CPU_Geometry generatePythagorasTree(int iterations) {
 	return cpuGeom;
 
 }
-
-
+*/
 
 
 
