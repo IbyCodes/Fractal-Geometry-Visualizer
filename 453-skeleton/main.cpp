@@ -324,15 +324,6 @@ CPU_Geometry generateKochSnowflake(int depth) {
 	glm::vec3 p2(0.5f, -0.5f, 0.f);   // bottom-right
 	glm::vec3 p3(0.f, sqrt(3.0f) / 2.0f - 0.5f, 0.f);  // top vertex of the equilateral triangle
 
-	// Define a set of colors for different iterations
-	std::vector<glm::vec3> colors = {
-		glm::vec3(1.0f, 0.0f, 0.0f),  // Red
-		glm::vec3(0.0f, 1.0f, 0.0f),  // Green
-		glm::vec3(0.0f, 0.0f, 1.0f),  // Blue
-		glm::vec3(1.0f, 1.0f, 0.0f),  // Yellow
-		glm::vec3(1.0f, 0.0f, 1.0f),  // Magenta
-		glm::vec3(0.0f, 1.0f, 1.0f)   // Cyan
-	};
 
 	// Recursive function to divide and create the Koch snowflake with changing colors (sort of similar to Serpinsi triangle)
 	std::function<void(glm::vec3, glm::vec3, int)> divideKoch = [&](glm::vec3 a, glm::vec3 b, int m) {
@@ -361,11 +352,9 @@ CPU_Geometry generateKochSnowflake(int depth) {
 			// If recursion depth is reached, add final vertices to geometry
 			cpuGeom.verts.push_back(a);
 			cpuGeom.verts.push_back(b);
-
-			// Assign color based on current depth (one color per new peak)
-			//glm::vec3 color = colors[depth % colors.size()];  // Cycle through colors
-			cpuGeom.cols.push_back(colors[3]);
-			cpuGeom.cols.push_back(colors[3]);
+			glm::vec3 yellowColor = glm::vec3(1.0f, 1.0f, 0.0f);
+			cpuGeom.cols.push_back(yellowColor); // first half of star
+			cpuGeom.cols.push_back(yellowColor); // 2nd half of star
 		}
 		};
 
