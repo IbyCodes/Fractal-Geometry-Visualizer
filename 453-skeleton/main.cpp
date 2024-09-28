@@ -211,593 +211,109 @@ CPU_Geometry generateSierpinski(int iterations) {
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-// (FIGURED OUT SIZE OF SQUARES, PERFECT SIZES)
+// OMG THIS WORKS
 CPU_Geometry generatePythagorasTree(int iterations) {
 	CPU_Geometry cpuGeom;
-	
-	// Function to draw a square
-	auto draw_square = [&](const glm::vec3& bl, const glm::vec3& br, const glm::vec3& tr, const glm::vec3& tl) {
-		// Add vertices in counterclockwise order
-		// 
-		 // First triangle (bottom left, bottom right, top left)    
-		cpuGeom.verts.push_back(bl); // first right triangle
-		cpuGeom.verts.push_back(br);
-		cpuGeom.verts.push_back(tr);
 
-		cpuGeom.verts.push_back(tr); // 2nd triangle (two right triangles create a square)
-		cpuGeom.verts.push_back(tl);
-		cpuGeom.verts.push_back(bl);
+	// Function to draw a square with the given color based on depth
+	auto draw_square = [&](const glm::vec3& bl, const glm::vec3& br, const glm::vec3& tr, const glm::vec3& tl, int current_iteration) {
+		// Adding vertices in counterclockwise order
+		cpuGeom.verts.push_back(bl); // bottom left
+		cpuGeom.verts.push_back(br); // bottom right
+		cpuGeom.verts.push_back(tr); // top right
+		cpuGeom.verts.push_back(tr); // top right
+		cpuGeom.verts.push_back(tl); // top left
+		cpuGeom.verts.push_back(bl); // bottom left
 
-		// Generates a random color for the square (I'll fix this later)
-		glm::vec3 color(static_cast<float>(rand()) / RAND_MAX,
-			static_cast<float>(rand()) / RAND_MAX,
-			static_cast<float>(rand()) / RAND_MAX);
+		// Set colors based on the iteration level
+		glm::vec3 color;
+		if (current_iteration == 0) {
+			color = glm::vec3(0.30f, 0.16f, 0.14f);  // Brown for the first stem (initial trunk)
+		}
+		else if (current_iteration == 1) { // dark green
+			color = glm::vec3(0.f, 0.1f, 0.f); 
+		}
+		else if (current_iteration == 2){ // lighter then last green
+			color = glm::vec3(0.f, 0.2f, 0.f);
+		}
+		else if (current_iteration == 3) { // lighter then last green
+			color = glm::vec3(0.f, 0.4f, 0.f);
+		}
+		else if (current_iteration == 4) { // lighter then last green
+			color = glm::vec3(0.f, 0.7f, 0.f);
+		}
+		else { // lightest green in tree
+			color = glm::vec3(0.f, 1.f, 0.f);
+		}
+
+		// Assign the chosen color to the square
 		for (int i = 0; i < 6; ++i) {
 			cpuGeom.cols.push_back(color);
 		}
 		};
 
+	// Recursive function to build the Pythagoras Tree
+	std::function<void(glm::vec3, glm::vec3, glm::vec3, glm::vec3, int, float)> add_tree =
+		[&](glm::vec3 bl, glm::vec3 br, glm::vec3 tr, glm::vec3 tl, int depth, float oldSideLength) {
+		int current_iteration = iterations - depth;  // Calculate the "current iteration" level
 
-	// Recursive function to build the Pythagoras Tree 
-	std::function<void(glm::vec3, glm::vec3, glm::vec3, glm::vec3, int, float)> add_tree = [&](glm::vec3 bl, glm::vec3 br, glm::vec3 tr, glm::vec3 tl, int depth, float oldSideLength) {
-		if (depth <= 0) {
-			draw_square(bl, br, tr, tl); // don't want program to crash so we'll just draw a square if this is the case
+		if (depth < 0) {
 			return;
 		}
 
-		draw_square(bl, br, tr, tl); // draw initial square
+		draw_square(bl, br, tr, tl, current_iteration);  // Draw the current square with appropriate color
 
-		// Convert angle from degrees to radians ( i think C++ prefers rad over degrees)
+		if (depth == 0) return;  // Stop when depth is zero
+
+		// Convert angles to radians
 		float angle_radLeft = -45.0f * (M_PI / 180.0f);
 		float angle_radRight = 45.0f * (M_PI / 180.0f);
 
+		// Calculate the side length for the next squares
+		float newSideLength = (sqrt(2) / 2) * oldSideLength;
 
-		float newSideLength = (sqrt(2) / 2) * oldSideLength; // the new side length of the next iteration of the squares to be drawn (basically scaling the square down per iteration)
+		// Generate direction vectors for the current square
+		glm::vec3 v = br - bl;                // Base vector (bottom side of square)
+		glm::vec3 v_perpendicular = tl - bl;  // Perpendicular vector (left side of square)
 
+		// Rotation coefficients for left square
+		glm::vec3 left_v = cos(-angle_radLeft) * v + sin(-angle_radLeft) * v_perpendicular;
+		glm::vec3 left_v_perpendicular = -sin(-angle_radLeft) * v + cos(-angle_radLeft) * v_perpendicular;
 
+		// Calculating new square vertices for the left square
+		glm::vec3 new_bl_left = tl;
+		glm::vec3 new_br_left = new_bl_left + left_v * (newSideLength / glm::length(left_v));
+		glm::vec3 new_tr_left = new_br_left + left_v_perpendicular * (newSideLength / glm::length(left_v_perpendicular));
+		glm::vec3 new_tl_left = new_bl_left + left_v_perpendicular * (newSideLength / glm::length(left_v_perpendicular));
 
-		// Rotating and translating to find the new square position for left branch
+		// Rotation coefficients for right square
+		glm::vec3 right_v = cos(-angle_radRight) * v + sin(-angle_radRight) * v_perpendicular;
+		glm::vec3 right_v_perpendicular = -sin(-angle_radRight) * v + cos(-angle_radRight) * v_perpendicular;
 
-		glm::vec3 new_bl_left = tl; // always true
+		// Calculate new square vertices for the right square
+		glm::vec3 new_bl_right = tr - right_v * (newSideLength / glm::length(right_v));
+		glm::vec3 new_br_right = tr;
+		glm::vec3 new_tr_right = new_br_right + right_v_perpendicular * (newSideLength / glm::length(right_v_perpendicular));
+		glm::vec3 new_tl_right = new_bl_right + right_v_perpendicular * (newSideLength / glm::length(right_v_perpendicular));
 
-		glm::vec3 new_br_left = tl + (newSideLength * glm::vec3(cos(angle_radLeft), sin(angle_radLeft), 0.f));  // point + vector = point, translation of point P by deltaV
-
-		glm::vec3 new_tr_left = new_br_left + (newSideLength * glm::vec3(-sin(angle_radLeft), cos(angle_radLeft), 0.f)); // point + vector = point
-
-		glm::vec3 new_tl_left = new_bl_left + (newSideLength * glm::vec3(-sin(angle_radLeft), cos(angle_radLeft), 0.f)); // point + vector = point
-
-		// drawing the left square
-		draw_square(new_bl_left, new_br_left, new_tr_left, new_tl_left);
-
-
-		// Rotating and translating to find the new square position for right branch
-
-		glm::vec3 new_bl_right = tr; // always true
-
-		glm::vec3 new_br_right = tr + (newSideLength * glm::vec3(cos(angle_radRight), sin(angle_radRight), 0.f)); // point + vector = point, translation of point P by deltaV
-
-		glm::vec3 new_tr_right = new_br_right + (newSideLength * glm::vec3(-sin(angle_radRight), cos(angle_radRight), 0.f)); // point + vector = point, translation of point P by deltaV
-
-		glm::vec3 new_tl_right = new_bl_right + (newSideLength * glm::vec3(-sin(angle_radRight), cos(angle_radRight), 0.f)); // point + vector = point, translation of point P by deltaV
-
-		// Drawing the right square
-		draw_square(new_bl_right, new_br_right, new_tr_right, new_tl_right);
-		
-
-		
-		// Recursively add the branches per new square 
+		// Recursively adding branches to the left and right squares
 		add_tree(new_bl_left, new_br_left, new_tr_left, new_tl_left, depth - 1, newSideLength);
 		add_tree(new_bl_right, new_br_right, new_tr_right, new_tl_right, depth - 1, newSideLength);
-
-
 		};
-
 
 	// Starting the tree with the base square
 	glm::vec3 p1(-0.1f, -0.5f, 0.f); // bottom left
 	glm::vec3 p2(0.1f, -0.5f, 0.f);  // bottom right
 	glm::vec3 p3(0.1f, -0.3f, 0.f);  // top right
 	glm::vec3 p4(-0.1f, -0.3f, 0.f); // top left
-
-	// Draw the initial square
-	draw_square(p1, p2, p3, p4);
-
-	float initialSideLength = p3.x - p4.x; // at the start ONLY! This is the initial length we start with (the top side of the square)
 
 	// Begin the recursive drawing
-	add_tree(p1, p2, p3, p4, iterations, initialSideLength);
+	add_tree(p1, p2, p3, p4, iterations, p3.x - p4.x);
 
 	return cpuGeom;
-
 }
 
-// best attempt
-/*
-CPU_Geometry generatePythagorasTree(int iterations) {
-	CPU_Geometry cpuGeom;
 
-	// Function to draw a square
-	auto draw_square = [&](const glm::vec3& bl, const glm::vec3& br, const glm::vec3& tr, const glm::vec3& tl) {
-		// Add vertices in counterclockwise order
-		 // First triangle (bottom left, bottom right, top left)
-		cpuGeom.verts.push_back(bl); // first triangle
-		cpuGeom.verts.push_back(br);
-		cpuGeom.verts.push_back(tr);
-
-
-		cpuGeom.verts.push_back(tr); // 2nd triangle (two right triangles create a square)
-		cpuGeom.verts.push_back(tl);
-		cpuGeom.verts.push_back(bl);
-
-
-		// Generates a random color for the square (I'll fix this later)
-		glm::vec3 color(static_cast<float>(rand()) / RAND_MAX,
-			static_cast<float>(rand()) / RAND_MAX,
-			static_cast<float>(rand()) / RAND_MAX);
-		for (int i = 0; i < 6; ++i) {
-			cpuGeom.cols.push_back(color);
-		}
-
-		};
-
-
-
-	// ok so basically, the top of the base square is the length of the hypotenuse for the triangle that is formed in between the two squares added to the top of the base
-	// to solve for the length of the sides of the new squares being added, just do root2/2 * hypotenuse
-
-
-	// Recursive function to build the Pythagoras Tree
-	std::function<void(glm::vec3, glm::vec3, glm::vec3, glm::vec3, int)> add_tree = [&](glm::vec3 bl, glm::vec3 br, glm::vec3 tr, glm::vec3 tl, int depth) {
-		if (depth <= 0) {
-			draw_square(bl, br, tr, tl); // don't want program to crash so we'll just draw a square if this is the case
-			return;
-		}
-
-		// Draw the current square
-		//draw_square(bl, br, tr, tl);
-
-
-
-		// centre of rotation: for the left square: its the bottom left
-		// for the right square, its the bottom right
-		//
-		// NOTE: TL TR, BL, BR ARE ALL (X,Y,Z) COORDINATES
-		// Calculate the size of the new squares
-
-		float hypotenuseLengthOdd = (tr.x - tl.x);
-		float new_square_side_lengthOdd = hypotenuseLengthOdd * (sqrt(2.0f) / 2.0f); // s = (root2)/2 * h, this will be one side length of each of the new squares
-
-		float hypotenuseLengthEven = sqrt((tr.x - tl.x) * (tr.x - tl.x) + (tr.y - tl.y) * (tr.y - tl.y));
-		float new_square_side_lengthEven = hypotenuseLengthEven * (sqrt(2.0f) / 2.0f); // s = (root2)/2 * h, this will be one side length of each of the new squares
-
-
-		glm::vec3 new_bl_left, new_br_left, new_tr_left, new_tl_left;
-		glm::vec3 new_bl_right, new_br_right, new_tr_right, new_tl_right;
-
-
-
-		if (depth % 2 == 1) { // if depth is odd . // GOOD
-			// Calculate vertice sides for the left branch square (-45-degree rotation)
-			new_bl_left = tl;
-
-			new_br_left = glm::vec3(tl.x + (hypotenuseLengthOdd / 2), (tl.y + (hypotenuseLengthOdd / 2)), 0.f);
-
-			new_tl_left = glm::vec3(tl.x - (hypotenuseLengthOdd / 2), (tl.y + (hypotenuseLengthOdd / 2)), 0.f);
-
-			new_tr_left = glm::vec3(tl.x, tl.y + hypotenuseLengthOdd, 0.f);
-
-
-		}
-
-		else { // if depth is EVEN 
-
-			// Calculate vertice sides for the left branch square (note that now its already at a 45% angle, so i need to change offsets accordingly
-
-			// left side-left square
-			new_bl_left = tl;
-
-			new_br_left = glm::vec3(tl.x, tl.y + new_square_side_lengthEven, 0.f);
-
-			new_tl_left = glm::vec3(tl.x - new_square_side_lengthEven, tl.y, 0.f);
-
-
-			new_tr_left = glm::vec3(tl.x - new_square_side_lengthEven, tl.y + new_square_side_lengthEven, 0.f);
-
-
-
-			// left side- right square
-			new_bl_right = glm::vec3(tl.x, (tl.y + new_square_side_lengthEven), 0.f);
-
-			new_br_right = tr;
-
-			new_tl_right = glm::vec3(tl.x, tl.y + (new_square_side_lengthEven * 2), 0.f);
-
-			new_tr_right = glm::vec3(tr.x, tr.y + new_square_side_lengthEven, 0.f);
-
-
-
-		}
-
-		// Draw the left branch square
-		draw_square(new_bl_left, new_br_left, new_tr_left, new_tl_left);
-
-
-
-
-
-		if (depth % 2 == 1) { // if depth is odd (right branch) 
-
-			// Calculating sides for the right branch square (+45-degree rotation)
-
-			new_bl_right = glm::vec3(tl.x + (hypotenuseLengthOdd / 2), (tr.y + (hypotenuseLengthOdd / 2)), 0.f);
-
-			new_br_right = tr;
-
-			new_tl_right = glm::vec3(tr.x, tr.y + hypotenuseLengthOdd, 0.f);
-
-			new_tr_right = glm::vec3(tr.x + (hypotenuseLengthOdd / 2), (tr.y + (hypotenuseLengthOdd / 2)), 0.f);
-
-
-		}
-
-
-		else { // if depth is even
-
-			// right side-left square
-			new_bl_left = tl;
-
-			new_br_left = glm::vec3(tl.x + new_square_side_lengthEven, tl.y, 0.f);
-
-			new_tl_left = glm::vec3(tl.x, tl.y + new_square_side_lengthEven, 0.f);
-
-			new_tr_left = glm::vec3(tl.x + new_square_side_lengthEven, tl.y + new_square_side_lengthEven, 0.f);
-
-
-			// right side-right square
-			new_bl_right = glm::vec3(tl.x + new_square_side_lengthEven, tl.y, 0.f);
-
-			new_br_right = (tr);
-
-			new_tl_right = glm::vec3(tr.x + new_square_side_lengthEven, tr.y + new_square_side_lengthEven, 0.f); // good
-
-			new_tr_right = glm::vec3(tr.x + new_square_side_lengthEven, tr.y, 0.f); // good
-
-
-		}
-
-		// Draw the right branch square
-		draw_square(new_bl_right, new_br_right, new_tr_right, new_tl_right);
-
-
-
-		// Recursively add the branches
-		add_tree(new_bl_left, new_br_left, new_tr_left, new_tl_left, depth - 1);
-		add_tree(new_bl_right, new_br_right, new_tr_right, new_tl_right, depth - 1);
-
-		};
-
-
-
-	// Starting the tree with the base square
-	glm::vec3 p1(-0.1f, -0.5f, 0.f); // bottom left
-	glm::vec3 p2(0.1f, -0.5f, 0.f);  // bottom right
-	glm::vec3 p3(0.1f, -0.3f, 0.f);  // top right
-	glm::vec3 p4(-0.1f, -0.3f, 0.f); // top left
-
-	// Draw the initial square
-	draw_square(p1, p2, p3, p4);
-
-	// Begin the recursive drawing
-	add_tree(p1, p2, p3, p4, iterations);
-
-	return cpuGeom;
-
-}
-*/
-
-
-
-/*
-// Function to draw a square
-void draw_square(CPU_Geometry& cpuGeom, const glm::vec3& bl, const glm::vec3& br, const glm::vec3& tr, const glm::vec3& tl) {
-	// First triangle (bl, br, tr)
-	cpuGeom.verts.push_back(bl);
-	cpuGeom.verts.push_back(br);
-	cpuGeom.verts.push_back(tr);
-
-	// Second triangle (tr, tl, bl)
-	cpuGeom.verts.push_back(tr);
-	cpuGeom.verts.push_back(tl);
-	cpuGeom.verts.push_back(bl);
-
-	// Generate random color for the square
-	glm::vec3 color(static_cast<float>(rand()) / RAND_MAX,
-		static_cast<float>(rand()) / RAND_MAX,
-		static_cast<float>(rand()) / RAND_MAX);
-	for (int i = 0; i < 6; ++i) {
-		cpuGeom.cols.push_back(color);
-	}
-}
-
-// Helper function to rotate a 2D point (around Z-axis) by a given angle
-glm::vec3 rotate_point_around_pivot(const glm::vec3& point, const glm::vec3& pivot, float angle) {
-	float cos_theta = cos(angle);
-	float sin_theta = sin(angle);
-
-	// Translate point to origin (relative to pivot), apply rotation, then translate back
-	glm::vec3 translated = point - pivot;
-	glm::vec3 rotated(
-		translated.x * cos_theta - translated.y * sin_theta,
-		translated.x * sin_theta + translated.y * cos_theta,
-		translated.z // z remains unchanged
-	);
-	return rotated + pivot;
-}
-
-// Recursive function to draw the Pythagoras Tree
-void draw_tree(CPU_Geometry& cpuGeom, glm::vec3 bl, glm::vec3 br, glm::vec3 tr, glm::vec3 tl, int iteration) {
-	if (iteration == 0) {
-		return;
-	}
-
-	// Draw the current square
-	draw_square(cpuGeom, bl, br, tr, tl);
-
-	// Side length of the current square
-	float side_length = glm::length(tr - tl);
-
-	// New side length for the smaller squares
-	float new_side_length = side_length * (sqrt(2.0f) / 2.0f);
-
-	// Calculate the center of the top side (between tr and tl)
-	glm::vec3 top_center = (tr + tl) * 0.5f;
-
-	// Calculate new top-left square vertices (rotated +45 degrees)
-	glm::vec3 left_tl = tl;
-	glm::vec3 left_tr = top_center;
-	glm::vec3 left_bl = rotate_point_around_pivot(left_tl, tl, glm::radians(45.0f));
-	glm::vec3 left_br = rotate_point_around_pivot(left_tr, tl, glm::radians(45.0f));
-
-	// Calculate new top-right square vertices (rotated -45 degrees)
-	glm::vec3 right_tl = top_center;
-	glm::vec3 right_tr = tr;
-	glm::vec3 right_bl = rotate_point_around_pivot(right_tl, tr, glm::radians(-45.0f));
-	glm::vec3 right_br = rotate_point_around_pivot(right_tr, tr, glm::radians(-45.0f));
-
-	// Recursively draw left and right squares
-	draw_tree(cpuGeom, left_bl, left_br, left_tr, left_tl, iteration - 1);
-	draw_tree(cpuGeom, right_bl, right_br, right_tr, right_tl, iteration - 1);
-}
-
-CPU_Geometry generatePythagorasTree(int iterations) {
-	CPU_Geometry cpuGeom;
-
-	// Function to draw a square
-	auto draw_square = [&](const glm::vec3& bl, const glm::vec3& br, const glm::vec3& tr, const glm::vec3& tl) {
-		// Add vertices in counterclockwise order (two triangles per square)
-		cpuGeom.verts.push_back(bl); // First triangle
-		cpuGeom.verts.push_back(br);
-		cpuGeom.verts.push_back(tr);
-
-		cpuGeom.verts.push_back(tr); // Second triangle
-		cpuGeom.verts.push_back(tl);
-		cpuGeom.verts.push_back(bl);
-
-		// Generate a random color for the square
-		glm::vec3 color(static_cast<float>(rand()) / RAND_MAX,
-			static_cast<float>(rand()) / RAND_MAX,
-			static_cast<float>(rand()) / RAND_MAX);
-		for (int i = 0; i < 6; ++i) {
-			cpuGeom.cols.push_back(color);
-		}
-		};
-
-	// Starting the tree with the base square
-	glm::vec3 p1(-0.1f, -0.5f, 0.f); // bottom left
-	glm::vec3 p2(0.1f, -0.5f, 0.f);  // bottom right
-	glm::vec3 p3(0.1f, -0.3f, 0.f);  // top right
-	glm::vec3 p4(-0.1f, -0.3f, 0.f); // top left
-
-	// Draw the initial square
-	draw_square(p1, p2, p3, p4);
-
-	// Start the recursive drawing
-	draw_tree(cpuGeom, p1, p2, p3, p4, iterations);
-
-	return cpuGeom;
-}
-*/
-
-
-
-
-
-
-
-
-/*
-glm::vec3 calculateKochTip(const glm::vec3& A, const glm::vec3& B) {
-	// Calculate the length of segment AB
-	float L = glm::length(B - A);
-
-	// Calculate point C (1/3 of the way from A to B)
-	glm::vec3 C = A + (1.0f / 3.0f) * (B - A);
-
-	// Calculate the angle of the segment AB
-	float theta = atan2(B.y - A.y, B.x - A.x);
-
-	// Calculate the tip point D
-	glm::vec3 D;
-	float height = (glm::sqrt(3.0f) / 6.0f) * L; // height of the equilateral triangle
-
-	D.x = C.x + height * cos(theta + glm::pi<float>() / 3.0f); // 60 degrees in radians
-	D.y = C.y + height * sin(theta + glm::pi<float>() / 3.0f);
-	D.z = 0.f; // Keep the z-coordinate the same
-
-	return D;
-}
-*/
-
-
-
-
-
-//CPU_Geometry generateKochSnowflake(int depth) {
-//	CPU_Geometry cpuGeom;
-//
-//	// Initial triangle vertices (an equilateral triangle)
-//	glm::vec3 p1(-0.5f, -0.5f, 0.f);
-//	glm::vec3 p2(0.5f, -0.5f, 0.f);
-//	glm::vec3 p3(0.f, 0.5f, 0.f);
-//
-//
-//	
-//	// Function to draw a single triangle by pushing its vertices
-//	auto draw_triangle = [&](const glm::vec3& a, const glm::vec3& b, const glm::vec3& c) {
-//		cpuGeom.verts.push_back(a); // bottom left
-//		cpuGeom.verts.push_back(b); // bottom right
-//		cpuGeom.verts.push_back(c); // top
-//
-//		/*
-//		// Generate a random color for each iteration, this bascially separates each triangle by a separate colour
-//		glm::vec3 color(static_cast<float>(rand()) / RAND_MAX,
-//			static_cast<float>(rand()) / RAND_MAX,
-//			static_cast<float>(rand()) / RAND_MAX);
-//			*/
-//		glm::vec3 colorOne = glm::vec3(0.0f, 0.0f, 1.0f); // blue
-//		glm::vec3 colorTwo = glm::vec3(0.0f, 1.0f, 0.0f); //green
-//		glm::vec3 colorThree = glm::vec3(1.0f, 0.0f, 0.0f); // red
-//		// Add the same color for all three vertices of the triangle
-//		cpuGeom.cols.push_back(colorOne);
-//		cpuGeom.cols.push_back(colorTwo);
-//		cpuGeom.cols.push_back(colorThree);
-//		};
-//
-//	
-//
-//	// Recursive function to subdivide the triangle 
-//	std::function<void(glm::vec3, glm::vec3, glm::vec3, int)> divideSnowflake = [&](glm::vec3 a, glm::vec3 b, glm::vec3 c, int m) {
-//		if (m > 0) { // where m is the iteration level
-//
-//			// A IS LEFT BOTTOM, B IS RIGHT BOTTOM, C IS TOP
-//
-//			// Calculate 1/3's of each side
-//
-//			// NEW TIP calculation
-//			//F.x = (P1.x + P2.x) / 2 + (sqrt(3) / 6) * (P1.y - P2.y);
-//			// F.y = (P1.y + P2.y) / 2 + (sqrt(3) / 6) * (P2.x - P1.x);
-//
-//			// LETS TRY THIS AGAIN
-//
-//
-//			// length = sqrt((P2.x - P1.x)**2 + (P2.Y - P1.Y)**2)
-//			// 
-//			// NEWPEAK.X = ((P1.X + P2.X)/2) + (sqrt((P2.x - P1.x)**2 + (P2.Y - P1.Y)**2) * (sqrt(3)/2)) * cos(60)
-//			// NEWPEAK.Y = ((P1.Y + P2.Y)/2) + (sqrt((P2.x - P1.x)**2 + (P2.Y - P1.Y)**2) *(sqrt(3)/2)) * sin(60)
-//
-//			
-//
-//
-//			// Find points 1/3 and 2/3 the way along each side
-//			glm::vec3 P1 = a + (b - a) * (1.0f / 3.0f); // 1/3 of the way from A to B
-//			glm::vec3 P2 = a + (b - a) * (2.0f / 3.0f); // 2/3 of the way from A to B
-//
-//			// Calculate the peak of the triangle
-//			//glm::vec3 P3 = P1 + glm::vec3(0.0f, (sqrt(3) / 3) * (P2.x - P1.x), 0.f); // Peak above the base // new tip to draw between A and B
-//			// glm::vec3 P3(((P1.x + P2.x) / 2 + (sqrt(3) / 6) * (P1.y - P2.y)), ((P1.y + P2.y) / 2 + (sqrt(3) / 6) * (P2.x - P1.x)), 0.f);  // new tip to draw between A and B
-//
-//			double x_newOne = ((P1.x + P2.x) / 2) +
-//				(sqrt(pow(P2.x - P1.x, 2) + pow(P2.y - P1.y, 2)) * (sqrt(3) / 2)) * cos(60);
-//
-//			double y_newOne = ((P1.y + P2.y) / 2) +
-//				(sqrt(pow(P2.x - P1.x, 2) + pow(P2.y - P1.y, 2)) * (sqrt(3) / 2)) * sin(60);
-//
-//			double z_newOne = 0.0f;
-//
-//			glm::vec3 P3(
-//				x_newOne,
-//				y_newOne,
-//				z_newOne
-//			);
-//
-//
-//
-//			glm::vec3 P4 = b + (c - b) * (1.0f / 3.0f); // 1/3 of the way from B to C
-//			glm::vec3 P5 = b + (c - b) * (2.0f / 3.0f); // 2/3 of the way from B to C
-//			//glm::vec3 P6 = P4 + glm::vec3(0.0f, (sqrt(3) / 3) * (P5.x - P4.x), 0.f); // Peak above the base// new tip to draw between B and C
-//			//glm::vec3 P6(((P4.x + P5.x) / 2 + (sqrt(3) / 6) * (P4.y - P5.y)), ((P4.y + P5.y) / 2 + (sqrt(3) / 6) * (P5.x - P4.x)), 0.f);// new tip to draw between B and C
-//			double x_newTwo = ((P4.x + P5.x) / 2) +
-//				(sqrt(pow(P5.x - P4.x, 2) + pow(P5.y - P4.y, 2)) * (sqrt(3) / 2)) * cos(60);
-//
-//			double y_newTwo = ((P4.y + P5.y) / 2) +
-//				(sqrt(pow(P5.x - P4.x, 2) + pow(P5.y - P4.y, 2)) * (sqrt(3) / 2)) * sin(60);
-//
-//			double z_newTwo = 0.0f;
-//
-//			glm::vec3 P6(
-//				x_newTwo,
-//				y_newTwo,
-//				z_newTwo
-//			);
-//
-//
-//			glm::vec3 P7 = c + (a - c) * (1.0f / 3.0f); // 1/3 of the way from C to A
-//			glm::vec3 P8 = c + (a - c) * (2.0f / 3.0f); // 2/3 of the way from C to A
-//			//glm::vec3 P9 = P7 + glm::vec3(0.0f, (sqrt(3) / 3) * (P8.x - P7.x), 0.f); // Peak above the base // new tip to draw between C and A
-//			//glm::vec3 P9(((P7.x + P8.x) / 2 + (sqrt(3) / 6) * (P7.y - P8.y)), ((P7.y + P8.y) / 2 + (sqrt(3) / 6) * (P8.x - P7.x)), 0.f); // new tip to draw between C and A
-//			double x_newThree = ((P7.x + P8.x) / 2) +
-//				(sqrt(pow(P6.x - P7.x, 2) + pow(P8.y - P7.y, 2)) * (sqrt(3) / 2)) * cos(60);
-//
-//			double y_newThree = ((P7.y + P8.y) / 2) +
-//				(sqrt(pow(P8.x - P7.x, 2) + pow(P8.y - P7.y, 2)) * (sqrt(3) / 2)) * sin(60);
-//
-//			double z_newThree = 0.0f;
-//
-//			glm::vec3 P9(
-//				x_newThree,
-//				y_newThree,
-//				z_newThree
-//			);
-//			
-//
-//
-//		
-//			// Recursively add the triangles
-//			// Recursively add the triangles
-//			divideSnowflake(P1, P2, P3, m - 1);
-//			divideSnowflake(P4, P5, P6, m - 1);
-//			divideSnowflake(P7, P8, P9, m - 1);
-//
-//		}
-//		else {
-//			// Draw the triangle when the recursion depth is zero
-//			draw_triangle(a, b, c);
-//		}
-//
-//		};
-//
-//	// Start the recursive subdivision
-//	divideSnowflake(p1, p2, p3, depth);
-//
-//
-//	return cpuGeom;
-//}
-//
-//
-//
 
 
 CPU_Geometry generateKochSnowflake(int depth) {
