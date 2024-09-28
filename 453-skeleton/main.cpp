@@ -75,7 +75,7 @@ public:
 			}
 			if (key == GLFW_KEY_UP) { // if we press the up arrow the 't' parameter will increase a little
 				parameters.t += parameters.tStep;
-				parameters.iterations = std::min(parameters.iterations + 1, 11); // Cap at 11 iterations
+				parameters.iterations = std::min(parameters.iterations + 1, 20); // Cap at 11 iterations
 			}
 
 			if (key == GLFW_KEY_DOWN) { // if we press the down arrow the 't' parameter will decrease a little
@@ -133,6 +133,12 @@ CPU_Geometry generateSin(Parameters p) { // originally from main, but now put in
 
 }
 
+// Function to blend between two colors based on a ratio
+glm::vec3 blend(const glm::vec3& c1, const glm::vec3& c2, float ratio) {
+	return c1 * (1 - ratio) + c2 * ratio;
+}
+
+
 CPU_Geometry generateSierpinski(int iterations) {
 	CPU_Geometry cpuGeom;
 
@@ -163,16 +169,34 @@ CPU_Geometry generateSierpinski(int iterations) {
 	};
 	*/
 
+	// Defining three base colors
+	glm::vec3 colorTop = glm::vec3(0.0f, 0.5f, 1.0f);    // Blue for top section
+	glm::vec3 colorLeft = glm::vec3(0.f, 0.2f, 0.f);   // Green for bottom-left
+	glm::vec3 colorRight = glm::vec3(1.0f, 0.5f, 0.5f);  // Pink for bottom-right
+
+
 	// Function to draw a single triangle by pushing its vertices
 	auto draw_triangle = [&](const glm::vec3& a, const glm::vec3& b, const glm::vec3& c) {
 		cpuGeom.verts.push_back(a);
 		cpuGeom.verts.push_back(b);
 		cpuGeom.verts.push_back(c);
 
-		// Generate a random color for each iteration, this bascially separates each triangle by a separate colour
-		glm::vec3 color(static_cast<float>(rand()) / RAND_MAX,
-			static_cast<float>(rand()) / RAND_MAX,
-			static_cast<float>(rand()) / RAND_MAX);
+		// Calculate the centroid to determine which region the triangle belongs to
+		glm::vec3 centroid = (a + b + c) / 3.0f;
+
+		// Assign color based on the region of the triangle
+
+		glm::vec3 color;
+		if (centroid.y > 0.0f) {
+			color = colorTop;  // Top region
+		}
+		else if (centroid.x < 0.0f) {
+			color = colorLeft; // Bottom-left region
+		}
+		else {
+			color = colorRight; // Bottom-right region
+		}
+		
 
 		// Add the same color for all three vertices of the triangle
 		cpuGeom.cols.push_back(color);
@@ -451,10 +475,8 @@ glm::vec2 computeRightPoint(glm::vec2 startPoint, glm::vec2 endPoint, int direct
 
 }
 
-CPU_Geometry generateDragonCurve(int interations) {
-
+CPU_Geometry generateDragonCurve(int iterations) {
 	CPU_Geometry cpuGeometry;
-
 	bool turnRight = true;
 	std::vector<glm::vec2> pointsList;
 
@@ -462,20 +484,23 @@ CPU_Geometry generateDragonCurve(int interations) {
 	pointsList.push_back(glm::vec2(-0.7, 0.2)); // Initial point
 	pointsList.push_back(glm::vec2(0.5, 0.2));  // Final point
 
-	// Define the color palette for the curve
+	// Define a color palette for the segments (adding more colors for variation)
 	std::vector<glm::vec3> colors = {
 		glm::vec3(1.0, 0.0, 0.0), // Red
 		glm::vec3(0.0, 1.0, 0.0), // Green
 		glm::vec3(0.0, 0.0, 1.0), // Blue
 		glm::vec3(1.0, 1.0, 0.0), // Yellow
 		glm::vec3(0.0, 1.0, 1.0), // Cyan
-		glm::vec3(1.0, 0.0, 1.0)  // Magenta
+		glm::vec3(1.0, 0.0, 1.0), // Magenta
+		glm::vec3(0.5, 0.5, 0.5), // Gray
+		glm::vec3(1.0, 0.5, 0.0), // Orange
+		glm::vec3(0.5, 0.0, 0.5)  // Purple
 	};
 
 	int direction = 0;
 
-	// Loop through the number of steps to build the curve
-	while (interations > 1) {
+	// Loop through the number of iterations to build the curve
+	while (iterations > 1) {
 		for (int index = 0; index < pointsList.size() - 1; index += 2) {
 			if (!turnRight) {
 				// Insert the point on the left side
@@ -490,16 +515,25 @@ CPU_Geometry generateDragonCurve(int interations) {
 			direction += 2;
 		}
 		direction++;
-		interations--;
+		iterations--;
 	}
 
-	
-	// Flip the X-axis and apply colors to the points
-	for (int i = 0; i < pointsList.size(); i++) {
-		glm::vec2 currentPoint = pointsList[i];
-		currentPoint.x = -currentPoint.x;  // Invert X-coordinate
-		cpuGeometry.verts.push_back(glm::vec3(currentPoint.x, currentPoint.y, 0.f));
-		cpuGeometry.cols.push_back(colors[i % colors.size()]);
+	// Apply colors and handle X-axis mirroring for visual symmetry
+	for (int i = 0; i < pointsList.size() - 1; i++) {
+		glm::vec2 startPoint = pointsList[i];
+		glm::vec2 endPoint = pointsList[i + 1];
+
+		// Invert X-coordinates for visualization
+		startPoint.x = -startPoint.x;
+		endPoint.x = -endPoint.x;
+
+		// Add the starting point and color for the segment
+		cpuGeometry.verts.push_back(glm::vec3(startPoint.x, startPoint.y, 0.f));
+		cpuGeometry.cols.push_back(colors[i % colors.size()]); // Each segment gets its own color
+
+		// Add the ending point and the same color (to form a complete line segment)
+		cpuGeometry.verts.push_back(glm::vec3(endPoint.x, endPoint.y, 0.f));
+		cpuGeometry.cols.push_back(colors[i % colors.size()]); // Maintain the same color for the complete line segment
 	}
 
 	return cpuGeometry;
