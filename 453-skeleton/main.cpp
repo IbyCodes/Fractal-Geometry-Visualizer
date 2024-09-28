@@ -7,6 +7,11 @@
 // opengl shaders are in glsl (dont need to know about for assignment #1)
 // FOLLOWED PARAMETERS CODE in tutorial to deal with the fact that we have multiple shapes that we gotta draw, not just 1
 
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
+
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <iostream>
@@ -19,11 +24,72 @@
 #include <cstdlib>  // For rand() and RAND_MAX
 #include <glm/glm.hpp>
 #include <cmath>
-#define M_PI 3.14159265358979323846
+#define M_PI 3.14159265358979323846 // PI
 #include <vector>
 #include <functional>
 #include <glm/gtc/matrix_transform.hpp> // For transformations
 #include <stack>
+
+
+
+/*
+// Variables to manage the GUI state
+int currentScene = 0; // Scene selector
+int fractalDepth = 5; // Depth/iteration of fractal shapes
+bool showGUI = true;  // Toggle GUI visibility
+
+// Scenes could be represented as constants or enumerations
+enum SceneType {
+	SCENE_SIN_WAVE = 0,
+	SCENE_SIERPINSKI_TRIANGLE,
+	SCENE_PYTHAGORAS_TREE,
+	SCENE_KOCH_SNOWFLAKE,
+	SCENE_DRAGON_CURVE,
+	SCENE_TOTAL // Count of scenes
+};
+
+
+
+// Function to create the ImGui panel
+void renderImGui() {
+	
+	// Start ImGui frame
+	ImGui_ImplOpenGL3_NewFrame();
+	ImGui_ImplGlfw_NewFrame();
+	ImGui::NewFrame();
+
+
+	if (showGUI) {
+		// Create an ImGui window called "panel"
+		ImGui::Begin("panel");
+
+		// Scene Selector Dropdown
+		ImGui::Text("Scene Selector:");
+		const char* scenes[] = { "Sin Wave", "Sierpinski Triangle", "Pythagoras Tree", "Koch Snowflake", "Dragon Curve"};
+		ImGui::Combo("Scene Number", &currentScene, scenes, IM_ARRAYSIZE(scenes));
+
+		// Iteration Depth Slider
+		ImGui::Text("Fractal Depth:");
+		ImGui::SliderInt("Fractal Depth", &fractalDepth, 1, 10); // Depth from 1 to 10
+
+		// Toggle Button for GUI Visibility
+		if (ImGui::Button("Toggle GUI")) {
+			showGUI = !showGUI;
+		}
+
+		// Display some application stats (optional)
+		ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+
+		// End ImGui panel
+		ImGui::End();
+	}
+
+	// Render ImGui
+	ImGui::Render();
+	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+}
+*/
+
 
 struct Parameters { // struct for parameters for user input example
 	float tStep = 0.1f;
@@ -437,47 +503,8 @@ CPU_Geometry generateDragonCurve(int iterations) {
 }
 */
 
-
-
-glm::vec2 computeLeftPoint(glm::vec2 startPoint, glm::vec2 endPoint, int direction) {
-	// Find the midpoint between startPoint and endPoint
-	glm::vec2 midPoint((startPoint.x + endPoint.x) / 2, (startPoint.y + endPoint.y) / 2);
-	// Calculate the difference in coordinates between the midpoint and startPoint
-	glm::vec2 offset = midPoint - startPoint;
-
-	// Depending on the direction, compute the point that extends to the left
-	if (direction % 4 == 0)
-		return glm::vec2(midPoint.x, midPoint.y + offset.x);
-	if (direction % 4 == 1)
-		return glm::vec2(startPoint.x, endPoint.y);
-	if (direction % 4 == 2)
-		return glm::vec2(midPoint.x - offset.y, midPoint.y);
-	if (direction % 4 == 3)
-		return glm::vec2(endPoint.x, startPoint.y);
-
-}
-
-glm::vec2 computeRightPoint(glm::vec2 startPoint, glm::vec2 endPoint, int direction) {
-	// Find the midpoint between startPoint and endPoint
-	glm::vec2 midPoint((startPoint.x + endPoint.x) / 2, (startPoint.y + endPoint.y) / 2);
-	// Calculate the difference in coordinates between the midpoint and startPoint
-	glm::vec2 offset = midPoint - startPoint;
-
-	// Depending on the direction, compute the point that extends to the right
-	if (direction % 4 == 0)
-		return glm::vec2(midPoint.x, midPoint.y - offset.x);
-	if (direction % 4 == 1)
-		return glm::vec2(endPoint.x, startPoint.y);
-	if (direction % 4 == 2)
-		return glm::vec2(midPoint.x + offset.y, midPoint.y);
-	if (direction % 4 == 3)
-		return glm::vec2(startPoint.x, endPoint.y);
-
-}
-
 CPU_Geometry generateDragonCurve(int iterations) {
 	CPU_Geometry cpuGeometry;
-	bool turnRight = true;
 	std::vector<glm::vec2> pointsList;
 
 	// Starting points for the curve
@@ -498,9 +525,44 @@ CPU_Geometry generateDragonCurve(int iterations) {
 	};
 
 	int direction = 0;
+	bool turnRight = true;
+
+	// Define lambda functions for computing left and right points
+	auto computeLeftPoint = [](glm::vec2 startPoint, glm::vec2 endPoint, int direction) -> glm::vec2 {
+		glm::vec2 midPoint((startPoint.x + endPoint.x) / 2, (startPoint.y + endPoint.y) / 2);
+		glm::vec2 offset = midPoint - startPoint;
+
+		if (direction % 4 == 0)
+			return glm::vec2(midPoint.x, midPoint.y + offset.x);
+		if (direction % 4 == 1)
+			return glm::vec2(startPoint.x, endPoint.y);
+		if (direction % 4 == 2)
+			return glm::vec2(midPoint.x - offset.y, midPoint.y);
+		if (direction % 4 == 3)
+			return glm::vec2(endPoint.x, startPoint.y);
+
+		return midPoint;
+		};
+
+	auto computeRightPoint = [](glm::vec2 startPoint, glm::vec2 endPoint, int direction) -> glm::vec2 {
+		glm::vec2 midPoint((startPoint.x + endPoint.x) / 2, (startPoint.y + endPoint.y) / 2);
+		glm::vec2 offset = midPoint - startPoint;
+
+		if (direction % 4 == 0)
+			return glm::vec2(midPoint.x, midPoint.y - offset.x);
+		if (direction % 4 == 1)
+			return glm::vec2(endPoint.x, startPoint.y);
+		if (direction % 4 == 2)
+			return glm::vec2(midPoint.x + offset.y, midPoint.y);
+		if (direction % 4 == 3)
+			return glm::vec2(startPoint.x, endPoint.y);
+
+		return midPoint;
+		};
 
 	// Loop through the number of iterations to build the curve
 	while (iterations > 1) {
+		int currentIteration = iterations; // Keep track of the current iteration
 		for (int index = 0; index < pointsList.size() - 1; index += 2) {
 			if (!turnRight) {
 				// Insert the point on the left side
@@ -518,6 +580,9 @@ CPU_Geometry generateDragonCurve(int iterations) {
 		iterations--;
 	}
 
+	// Safeguard against divide-by-zero issue
+	int pointsPerColor = (pointsList.size() / colors.size()) > 0 ? (pointsList.size() / colors.size()) : 1;
+
 	// Apply colors and handle X-axis mirroring for visual symmetry
 	for (int i = 0; i < pointsList.size() - 1; i++) {
 		glm::vec2 startPoint = pointsList[i];
@@ -527,17 +592,20 @@ CPU_Geometry generateDragonCurve(int iterations) {
 		startPoint.x = -startPoint.x;
 		endPoint.x = -endPoint.x;
 
-		// Add the starting point and color for the segment
+		// Add the starting point and color for the segment based on the adjusted iteration index
 		cpuGeometry.verts.push_back(glm::vec3(startPoint.x, startPoint.y, 0.f));
-		cpuGeometry.cols.push_back(colors[i % colors.size()]); // Each segment gets its own color
+		cpuGeometry.cols.push_back(colors[(i / pointsPerColor) % colors.size()]); // Assign color per segment, considering the corrected pointsPerColor
 
 		// Add the ending point and the same color (to form a complete line segment)
 		cpuGeometry.verts.push_back(glm::vec3(endPoint.x, endPoint.y, 0.f));
-		cpuGeometry.cols.push_back(colors[i % colors.size()]); // Maintain the same color for the complete line segment
+		cpuGeometry.cols.push_back(colors[(i / pointsPerColor) % colors.size()]); // Maintain the same color for the complete line segment
 	}
 
 	return cpuGeometry;
 }
+
+
+
 
 
 
@@ -616,6 +684,19 @@ int main() {
 	// WINDOW
 	glfwInit(); // we are using glfw, a openGL library
 	Window window(800, 800, "CPSC 453 A1"); // can set callbacks at construction if desired
+	GLFWwindow* glfwWindow = glfwCreateWindow(800, 800, "CPSC 453 A1 GUI Window", nullptr, nullptr);  // Direct creation of the window
+
+
+	glfwMakeContextCurrent(glfwWindow);
+
+
+	//Window window(glfwWindow);
+	/*
+	*
+	GLFWwindow* windowNew = glfwCreateWindow(800, 600, "ImGui OpenGL", NULL, NULL); // A new GLFW window
+	glfwMakeContextCurrent(windowNew);  // Ensure the context is current
+	glfwSwapInterval(1);  // Enable vsync
+	*/
 
 	GLDebug::enable();
 
@@ -625,7 +706,18 @@ int main() {
 	// CALLBACKS
 	auto callbacks = std::make_shared<MyCallbacks>(shader); // can also update callbacks to new ones
 	window.setCallbacks(callbacks);
+
 	
+	/*
+	// 5. Setup ImGui context in the same main OpenGL window context
+	ImGui::CreateContext();
+	ImGuiIO& io = ImGui::GetIO();
+	ImGui::StyleColorsDark();  // Set dark style
+
+	// Initialize ImGui for the same GLFW window and OpenGL context
+	ImGui_ImplGlfw_InitForOpenGL(windowNew, true);  // Use the main window pointer
+	ImGui_ImplOpenGL3_Init("#version 130");
+	*/
 
 	// GEOMETRY
 	CPU_Geometry cpuGeom;
@@ -652,8 +744,35 @@ int main() {
 	// RENDER LOOP
 	// Keeps running until user decides to press esc or something
 	// this loop runs EVERY frame
+
+	 // SOURCE USED: https://www.youtube.com/watch?v=VRwhNKoxUtk&ab_channel=VictorGordan
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+	ImGuiIO& io = ImGui::GetIO(); (void)io;
+	ImGui::StyleColorsDark();
+	ImGui_ImplGlfw_InitForOpenGL(glfwWindow, true);
+	ImGui_ImplOpenGL3_Init("#version 330");
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	while (!window.shouldClose()) {
 		glfwPollEvents();
+
+
+		// Set up ImGui for new frame
+		//renderImGui(); // should work
+
 
 		Parameters newP = callbacks->getParameters();
 		int currentFractalType = callbacks->getFractalType();
@@ -732,6 +851,12 @@ int main() {
 			glEnable(GL_FRAMEBUFFER_SRGB); // tells us to use the srgb color space, flag used (OpenGL is a global state machine)
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // clearing the current buffers (2, have to clear both). Two buffers, each split into 3 parts, R, G, B, R, G, B
 
+
+			ImGui_ImplOpenGL3_NewFrame();
+			ImGui_ImplGlfw_NewFrame();
+			ImGui::NewFrame();
+
+
 			if (currentFractalType == 0) {
 				glDrawArrays(GL_LINE_STRIP, 0, GLsizei(cpuGeom.verts.size())); // drawing on the buffer (sin wave)
 			}
@@ -754,8 +879,22 @@ int main() {
 
 			glDisable(GL_FRAMEBUFFER_SRGB); // disable sRGB for things like imgui
 
+			ImGui::Begin("My name is window, ImGUI window");
+			ImGui::Text("Hello there buddy!");
+			ImGui::End();
+
+			ImGui::Render();
+			ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+
+
+			//ImGui::Render();
+			//ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
 			window.swapBuffers(); // we're using a dual buffer system, so once we're done drawing on one buffer we swap it
 		}
+
+
 
 	// NOTE: openGL likes a counter-clockwise order format, so try to draw vertices via counter-clockwise order
 	// theres several things you can draw. Some examples:
@@ -764,6 +903,12 @@ int main() {
 	// GL_LINE_STRIP (n-1 segments, if 5 points, 4 lines, just connecting all points together (no loop))
 	// GL_LINE_LOOP (connects all dots together like a triangle, square, etc) n segments, similar to strip but forms a loop shape
 	// GL_TRIANGLES (takes 3 vertices, produces 1 triangle. Fills in everything in betwen the triangle)
+
+
+	// Clean up ImGui resources
+	ImGui_ImplOpenGL3_Shutdown();
+	ImGui_ImplGlfw_Shutdown();
+	ImGui::DestroyContext();
 
 	glfwTerminate();
 	return 0;
