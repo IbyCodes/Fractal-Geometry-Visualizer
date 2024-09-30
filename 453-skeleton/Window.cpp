@@ -114,3 +114,33 @@ glm::ivec2 Window::getSize() const {
 	glfwGetWindowSize(window.get(), &w, &h);
 	return glm::ivec2(w, h);
 }
+
+// ImGui integration functions
+void Window::setupImGui() {
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+	ImGui::StyleColorsDark();
+
+	// Initialize ImGui with GLFW and OpenGL3
+	ImGui_ImplGlfw_InitForOpenGL(window.get(), true);
+	ImGui_ImplOpenGL3_Init("#version 330");
+	glfwSetInputMode(window.get(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+
+}
+
+void Window::startImGuiFrame() {
+	ImGui_ImplOpenGL3_NewFrame();
+	ImGui_ImplGlfw_NewFrame();
+	ImGui::NewFrame();
+}
+
+void Window::renderImGui() {
+	ImGui::Render();
+	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+}
+
+void Window::shutdownImGui() {
+	ImGui_ImplOpenGL3_Shutdown();
+	ImGui_ImplGlfw_Shutdown();
+	ImGui::DestroyContext();
+}

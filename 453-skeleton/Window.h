@@ -11,6 +11,10 @@
 
 #include <memory>
 
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
+
 
 // Class that specifies the interface for the most common GLFW callbacks
 //
@@ -62,6 +66,12 @@ public:
 	int shouldClose() { return glfwWindowShouldClose(window.get()); }
 	void makeContextCurrent() { glfwMakeContextCurrent(window.get()); }
 	void swapBuffers() { glfwSwapBuffers(window.get()); }
+
+	// Handle ImGui context
+	void setupImGui();
+	void startImGuiFrame();
+	void renderImGui();
+	void shutdownImGui();
 
 private:
 	std::unique_ptr<GLFWwindow, WindowDeleter> window; // owning ptr (from GLFW)

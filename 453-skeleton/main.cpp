@@ -32,15 +32,15 @@
 
 
 
-/*
+
 // Variables to manage the GUI state
 int currentScene = 0; // Scene selector
-int fractalDepth = 5; // Depth/iteration of fractal shapes
+int fractalDepth = 10; // Depth/iteration of fractal shapes
 bool showGUI = true;  // Toggle GUI visibility
 
-// Scenes could be represented as constants or enumerations
+// Scenes 
 enum SceneType {
-	SCENE_SIN_WAVE = 0,
+	SCENE_SIN_WAVE,
 	SCENE_SIERPINSKI_TRIANGLE,
 	SCENE_PYTHAGORAS_TREE,
 	SCENE_KOCH_SNOWFLAKE,
@@ -49,7 +49,7 @@ enum SceneType {
 };
 
 
-
+/*
 // Function to create the ImGui panel
 void renderImGui() {
 	
@@ -405,7 +405,6 @@ CPU_Geometry generatePythagorasTree(int iterations) {
 
 
 
-
 CPU_Geometry generateKochSnowflake(int depth) {
 	CPU_Geometry cpuGeom;
 
@@ -457,55 +456,14 @@ CPU_Geometry generateKochSnowflake(int depth) {
 }
 
 
-/*
-CPU_Geometry generateDragonCurve(int iterations) {
-	// Initial two points forming the first line segment
+// source used to help: https://rosettacode.org/wiki/Dragon_curve
+// Defining directions for easy understanding
+enum Directions { NORTH = 0, EAST, SOUTH, WEST };
 
-	CPU_Geometry cpuGeom;
-
-	std::vector<glm::vec2> points;
-
-	glm::vec2 start(-0.5f, 0.0f);
-	glm::vec2 end(0.5f, 0.0f);
-
-	points.push_back(start);
-	points.push_back(end);
-
-	// For each iteration, update the point set
-	for (int iter = 0; iter < iterations; iter++) {
-		int n = points.size();
-		glm::vec2 midpoint = (points[n - 1] + points[0]) / 2.0f;  // Find midpoint of the last segment
-
-		std::vector<glm::vec2> newPoints;
-
-		// Copy existing points and apply 90-degree rotation
-		for (int i = 0; i < n; i++) {
-			glm::vec2 newPoint;
-			// Rotate by 90 degrees around the midpoint
-			newPoint.x = midpoint.x + (points[i].y - midpoint.y);
-			newPoint.y = midpoint.y - (points[i].x - midpoint.x);
-			newPoints.push_back(newPoint);
-		}
-
-		// Append the rotated points to the original set
-		points.insert(points.end(), newPoints.rbegin(), newPoints.rend());
-	}
-
-	// Convert points into CPU_Geometry
-	for (const auto& p : points) {
-		cpuGeom.verts.push_back(glm::vec3(p, 0.0f));  // Convert 2D point to 3D (z = 0)
-
-		// Assign a color for each iteration (for simplicity, just using white)
-		cpuGeom.cols.push_back(glm::vec3(1.0f, 1.0f, 1.0f));  // White color for now
-	}
-
-	return cpuGeom;
-}
-*/
-
+// Generates a Dragon Curve fractal geometry
 CPU_Geometry generateDragonCurve(int iterations) {
 	CPU_Geometry cpuGeometry;
-	std::vector<glm::vec2> pointsList;
+	std::vector<glm::vec2> pointsList; // will store dragon curve points
 
 	// Starting points for the curve
 	pointsList.push_back(glm::vec2(-0.7, 0.2)); // Initial point
@@ -524,45 +482,48 @@ CPU_Geometry generateDragonCurve(int iterations) {
 		glm::vec3(0.5, 0.0, 0.5)  // Purple
 	};
 
-	int direction = 0;
+	Directions direction = NORTH; // Initialize with North direction
 	bool turnRight = true;
 
 	// Define lambda functions for computing left and right points
-	auto computeLeftPoint = [](glm::vec2 startPoint, glm::vec2 endPoint, int direction) -> glm::vec2 {
+	auto computeLeftPoint = [](glm::vec2 startPoint, glm::vec2 endPoint, Directions direction) -> glm::vec2 {
 		glm::vec2 midPoint((startPoint.x + endPoint.x) / 2, (startPoint.y + endPoint.y) / 2);
 		glm::vec2 offset = midPoint - startPoint;
 
-		if (direction % 4 == 0)
+		switch (direction) {
+		case NORTH:
 			return glm::vec2(midPoint.x, midPoint.y + offset.x);
-		if (direction % 4 == 1)
+		case EAST:
 			return glm::vec2(startPoint.x, endPoint.y);
-		if (direction % 4 == 2)
+		case SOUTH:
 			return glm::vec2(midPoint.x - offset.y, midPoint.y);
-		if (direction % 4 == 3)
+		case WEST:
 			return glm::vec2(endPoint.x, startPoint.y);
-
-		return midPoint;
+		default:
+			return midPoint;
+		}
 		};
 
-	auto computeRightPoint = [](glm::vec2 startPoint, glm::vec2 endPoint, int direction) -> glm::vec2 {
+	auto computeRightPoint = [](glm::vec2 startPoint, glm::vec2 endPoint, Directions direction) -> glm::vec2 {
 		glm::vec2 midPoint((startPoint.x + endPoint.x) / 2, (startPoint.y + endPoint.y) / 2);
 		glm::vec2 offset = midPoint - startPoint;
 
-		if (direction % 4 == 0)
+		switch (direction) {
+		case NORTH:
 			return glm::vec2(midPoint.x, midPoint.y - offset.x);
-		if (direction % 4 == 1)
+		case EAST:
 			return glm::vec2(endPoint.x, startPoint.y);
-		if (direction % 4 == 2)
+		case SOUTH:
 			return glm::vec2(midPoint.x + offset.y, midPoint.y);
-		if (direction % 4 == 3)
+		case WEST:
 			return glm::vec2(startPoint.x, endPoint.y);
-
-		return midPoint;
+		default:
+			return midPoint;
+		}
 		};
 
 	// Loop through the number of iterations to build the curve
 	while (iterations > 1) {
-		int currentIteration = iterations; // Keep track of the current iteration
 		for (int index = 0; index < pointsList.size() - 1; index += 2) {
 			if (!turnRight) {
 				// Insert the point on the left side
@@ -574,16 +535,18 @@ CPU_Geometry generateDragonCurve(int iterations) {
 				pointsList.insert(pointsList.begin() + index + 1, computeRightPoint(pointsList.at(index), pointsList.at(index + 1), direction));
 				turnRight = false;
 			}
-			direction += 2;
+			// Update direction after two points are inserted
+			direction = static_cast<Directions>((direction + 2) % 4);
 		}
-		direction++;
+		// Increment direction for next iteration
+		direction = static_cast<Directions>((direction + 1) % 4);
 		iterations--;
 	}
 
 	// Safeguard against divide-by-zero issue
 	int pointsPerColor = (pointsList.size() / colors.size()) > 0 ? (pointsList.size() / colors.size()) : 1;
 
-	// Apply colors and handle X-axis mirroring for visual symmetry
+	// Apply colors and handle X-axis mirroring for visual symmetry (I wasn't sure if I had to show the curve exactly like the assignment or not, so I decided to mirror my points just in case)
 	for (int i = 0; i < pointsList.size() - 1; i++) {
 		glm::vec2 startPoint = pointsList[i];
 		glm::vec2 endPoint = pointsList[i + 1];
@@ -609,86 +572,20 @@ CPU_Geometry generateDragonCurve(int iterations) {
 
 
 
-/*
-CPU_Geometry generateDragonCurve(int iterations) {
-	CPU_Geometry cpuGeom;
-
-	bool right = true;
-	std::vector<glm::vec2> array; // Declare a vector of glm::vec2
-
-	// initial coordinates and colors
-	array.push_back(glm::vec2(-0.7, 0.2));
-	array.push_back(glm::vec2(0.5, 0.2));
-	glm::vec3 startColor(0.0, 0.6, 0.9);
-	glm::vec3 endColor(1.0, 0.4, 0.1);
-
-	std::vector<glm::vec3> colorPalette = {
-	glm::vec3(1.0, 0.0, 0.0), // Red
-	glm::vec3(0.0, 1.0, 0.0), // Green
-	glm::vec3(0.0, 0.0, 1.0), // Blue
-	glm::vec3(1.0, 1.0, 0.0), // Yellow
-	glm::vec3(0.0, 1.0, 1.0), // Cyan
-	glm::vec3(1.0, 0.0, 1.0)  // Magenta
-	};
-
-	
-	// there are 4 "modes" to aid with folding calculations
-	// the mode tells the function which way the line is propagating, so it know which way to extrude
-	// Mode 0 = west/east
-	// Mode 1 = northeast/southwest
-	// Mode 2 = north/south
-	// Mode 3 = northwest/southeast
-	int mode = 0;
-	while (iterations > 1) {
-		// iterate through the vector of values, use adjacent values to calculate intermediate values and insert them back into the vector
-		for (int index = 0; index < array.size() - 1; index += 2) {
-			// alternate between turning left and right
-			if (right) {
-				array.insert(array.begin() + index + 1, plotRight(array.at(index), array.at(index + 1), mode));
-				right = false;
-			}
-			else if (!right) {
-				array.insert(array.begin() + index + 1, plotLeft(array.at(index), array.at(index + 1), mode));
-				right = true;
-			}
-			// a 90 turn = a mode shift of 2
-			mode += 2;
-		}
-		// shift the mode to prepare for the next level
-		mode++;
-		iterations--;
-	}
-
-	// draw all points and blend between two colors
-	float size = array.size();
-	for (int i = 0; i < array.size(); i++) {
-		cpuGeom.verts.push_back(glm::vec3(array[i].x, array[i].y, 0.f));
-		//cpuGeom.cols.push_back(startColor * (1 - (i / size)) + endColor * (i / size));
-
-		 // Cycle through colors in the palette
-		cpuGeom.cols.push_back(colorPalette[i % colorPalette.size()]);
-	}
-
-
-	return cpuGeom;
-
-}
-*/
-
-
-
-
 int main() {
 	Log::debug("Starting main");
 
 	// WINDOW
 	glfwInit(); // we are using glfw, a openGL library
 	Window window(800, 800, "CPSC 453 A1"); // can set callbacks at construction if desired
-	GLFWwindow* glfwWindow = glfwCreateWindow(800, 800, "CPSC 453 A1 GUI Window", nullptr, nullptr);  // Direct creation of the window
 
+	//GLFWwindow* window = glfwCreateWindow(800, 800, "CPSC 453 A1 GUI Window", nullptr, nullptr);  // Direct creation of the window
 
-	glfwMakeContextCurrent(glfwWindow);
+	//glfwMakeContextCurrent(window); // error, but I dont think I have to do this anyways
 
+	//ImGui_ImplGlfw_InitForOpenGL(window, true);  // Use the main window pointer
+
+	window.setupImGui();
 
 	//Window window(glfwWindow);
 	/*
@@ -741,28 +638,18 @@ int main() {
 	gpuGeom.setVerts(cpuGeom.verts);
 	gpuGeom.setCols(cpuGeom.cols);
 
+
 	// RENDER LOOP
 	// Keeps running until user decides to press esc or something
 	// this loop runs EVERY frame
 
 	 // SOURCE USED: https://www.youtube.com/watch?v=VRwhNKoxUtk&ab_channel=VictorGordan
-	IMGUI_CHECKVERSION();
-	ImGui::CreateContext();
-	ImGuiIO& io = ImGui::GetIO(); (void)io;
-	ImGui::StyleColorsDark();
-	ImGui_ImplGlfw_InitForOpenGL(glfwWindow, true);
-	ImGui_ImplOpenGL3_Init("#version 330");
-
-
-
-
-
-
-
-
-
-
-
+	//IMGUI_CHECKVERSION();
+	//ImGui::CreateContext();
+	//ImGuiIO& io = ImGui::GetIO(); (void)io;
+	//ImGui::StyleColorsDark();
+	////ImGui_ImplGlfw_InitForOpenGL(window, true); // error
+	//ImGui_ImplOpenGL3_Init("#version 330");
 
 
 
@@ -770,8 +657,21 @@ int main() {
 		glfwPollEvents();
 
 
-		// Set up ImGui for new frame
-		//renderImGui(); // should work
+		window.startImGuiFrame();
+
+		// Scene Selector
+		ImGui::Begin("Fractal Settings");
+		const char* scenes[] = { "Sierpinski Triangle", "Koch Snowflake", "Pythagoras Tree", "Dragon Curve" };
+		ImGui::Text("Select Scene:");
+		ImGui::Combo("##scene_selector", &currentScene, scenes, SCENE_TOTAL);
+		// Fractal Depth Slider
+		ImGui::Text("Fractal Depth:");
+		ImGui::SliderInt("##fractal_depth", &fractalDepth, 0, 10); // Set depth range from 0 to 10
+		ImGui::End();
+
+
+
+
 
 
 		Parameters newP = callbacks->getParameters();
@@ -852,10 +752,6 @@ int main() {
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // clearing the current buffers (2, have to clear both). Two buffers, each split into 3 parts, R, G, B, R, G, B
 
 
-			ImGui_ImplOpenGL3_NewFrame();
-			ImGui_ImplGlfw_NewFrame();
-			ImGui::NewFrame();
-
 
 			if (currentFractalType == 0) {
 				glDrawArrays(GL_LINE_STRIP, 0, GLsizei(cpuGeom.verts.size())); // drawing on the buffer (sin wave)
@@ -879,12 +775,14 @@ int main() {
 
 			glDisable(GL_FRAMEBUFFER_SRGB); // disable sRGB for things like imgui
 
-			ImGui::Begin("My name is window, ImGUI window");
-			ImGui::Text("Hello there buddy!");
+			/*
+			// Your ImGui code here
+			ImGui::Begin("Hello, World!");
+			ImGui::Text("This is a basic ImGui window!");
 			ImGui::End();
+			*/
 
-			ImGui::Render();
-			ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+			window.renderImGui();
 
 
 
@@ -905,10 +803,7 @@ int main() {
 	// GL_TRIANGLES (takes 3 vertices, produces 1 triangle. Fills in everything in betwen the triangle)
 
 
-	// Clean up ImGui resources
-	ImGui_ImplOpenGL3_Shutdown();
-	ImGui_ImplGlfw_Shutdown();
-	ImGui::DestroyContext();
+	window.shutdownImGui();
 
 	glfwTerminate();
 	return 0;
