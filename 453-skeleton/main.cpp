@@ -456,11 +456,12 @@ CPU_Geometry generateKochSnowflake(int depth) {
 }
 
 
-// source used to help: https://rosettacode.org/wiki/Dragon_curve
+// sources used to help for this: https://rosettacode.org/wiki/Dragon_curve, https://www.csharphelper.com/howtos/howto_heighway_dragon.html, https://tfetimes.com/c-dragon-curve/
+// 
 // Defining directions for easy understanding
 enum Directions { NORTH = 0, EAST, SOUTH, WEST };
 
-// Generates a Dragon Curve fractal geometry
+// Generates a Dragon Curve fractal
 CPU_Geometry generateDragonCurve(int iterations) {
 	CPU_Geometry cpuGeometry;
 	std::vector<glm::vec2> pointsList; // will store dragon curve points
@@ -469,7 +470,7 @@ CPU_Geometry generateDragonCurve(int iterations) {
 	pointsList.push_back(glm::vec2(-0.7, 0.2)); // Initial point
 	pointsList.push_back(glm::vec2(0.5, 0.2));  // Final point
 
-	// Define a color palette for the segments (adding more colors for variation)
+	// Defining a color palette for the segments (I need to figure out now to color it properly) 
 	std::vector<glm::vec3> colors = {
 		glm::vec3(1.0, 0.0, 0.0), // Red
 		glm::vec3(0.0, 1.0, 0.0), // Green
@@ -485,7 +486,7 @@ CPU_Geometry generateDragonCurve(int iterations) {
 	Directions direction = NORTH; // Initialize with North direction
 	bool turnRight = true;
 
-	// Define lambda functions for computing left and right points
+	// Defining lambda functions for computing left and right points
 	auto computeLeftPoint = [](glm::vec2 startPoint, glm::vec2 endPoint, Directions direction) -> glm::vec2 {
 		glm::vec2 midPoint((startPoint.x + endPoint.x) / 2, (startPoint.y + endPoint.y) / 2);
 		glm::vec2 offset = midPoint - startPoint;
@@ -570,13 +571,12 @@ CPU_Geometry generateDragonCurve(int iterations) {
 
 
 
-
-
 int main() {
 	Log::debug("Starting main");
 
 	// WINDOW
 	glfwInit(); // we are using glfw, a openGL library
+
 	Window window(800, 800, "CPSC 453 A1"); // can set callbacks at construction if desired
 
 	//GLFWwindow* window = glfwCreateWindow(800, 800, "CPSC 453 A1 GUI Window", nullptr, nullptr);  // Direct creation of the window
@@ -659,6 +659,8 @@ int main() {
 
 		window.startImGuiFrame();
 
+
+		/*
 		// Scene Selector
 		ImGui::Begin("Fractal Settings");
 		const char* scenes[] = { "Sierpinski Triangle", "Koch Snowflake", "Pythagoras Tree", "Dragon Curve" };
@@ -668,12 +670,9 @@ int main() {
 		ImGui::Text("Fractal Depth:");
 		ImGui::SliderInt("##fractal_depth", &fractalDepth, 0, 10); // Set depth range from 0 to 10
 		ImGui::End();
+		*/
 
-
-
-
-
-
+		
 		Parameters newP = callbacks->getParameters();
 		int currentFractalType = callbacks->getFractalType();
 
@@ -776,11 +775,31 @@ int main() {
 			glDisable(GL_FRAMEBUFFER_SRGB); // disable sRGB for things like imgui
 
 			/*
+			ImGui::Begin("Test Window");
+			ImGui::Button("Click Me");
+			ImGui::Text("If you can click this button, inputs are working correctly.");
+			ImGui::End();
+
+			*/
+			/*
 			// Your ImGui code here
 			ImGui::Begin("Hello, World!");
 			ImGui::Text("This is a basic ImGui window!");
 			ImGui::End();
 			*/
+
+			
+			// Scene Selector
+			ImGui::Begin("Fractal Settings");
+			const char* scenes[] = { "Sin Wave", "Sierpinski Triangle", "Koch Snowflake", "Pythagoras Tree", "Dragon Curve" };
+			ImGui::Text("Select Scene:");
+			ImGui::Combo("##scene_selector", &currentScene, scenes, SCENE_TOTAL);
+			// Fractal Depth Slider
+			ImGui::Text("Fractal Depth:");
+			ImGui::SliderInt("##fractal_depth", &fractalDepth, 0, 10); // Set depth range from 0 to 10
+			ImGui::End();
+		
+
 
 			window.renderImGui();
 

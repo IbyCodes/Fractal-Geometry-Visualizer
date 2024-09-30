@@ -16,8 +16,11 @@ void Window::keyMetaCallback(GLFWwindow* window, int key, int scancode, int acti
 
 
 void Window::mouseButtonMetaCallback(GLFWwindow* window, int button, int action, int mods) {
-	CallbackInterface* callbacks = static_cast<CallbackInterface*>(glfwGetWindowUserPointer(window));
-	callbacks->mouseButtonCallback(button, action, mods);
+	ImGuiIO& io = ImGui::GetIO();
+	if (!io.WantCaptureMouse) {  // Process mouse events only if ImGui does not want to capture
+		CallbackInterface* callbacks = static_cast<CallbackInterface*>(glfwGetWindowUserPointer(window));
+		callbacks->mouseButtonCallback(button, action, mods);
+	}
 }
 
 
@@ -115,8 +118,10 @@ glm::ivec2 Window::getSize() const {
 	return glm::ivec2(w, h);
 }
 
+
 // ImGui integration functions
 void Window::setupImGui() {
+	//glfwMakeContextCurrent(window.get()); 
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
 	ImGui::StyleColorsDark();
@@ -124,14 +129,31 @@ void Window::setupImGui() {
 	// Initialize ImGui with GLFW and OpenGL3
 	ImGui_ImplGlfw_InitForOpenGL(window.get(), true);
 	ImGui_ImplOpenGL3_Init("#version 330");
+
+	// Set GLFW input mode for ImGui
 	glfwSetInputMode(window.get(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 
+	// Ensure that ImGui captures all mouse/keyboard inputs
+	ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+	ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
 }
+
 
 void Window::startImGuiFrame() {
 	ImGui_ImplOpenGL3_NewFrame();
 	ImGui_ImplGlfw_NewFrame();
 	ImGui::NewFrame();
+
+
+	ImGuiIO& io = ImGui::GetIO();
+	double mouseX, mouseY;
+	glfwGetCursorPos(window.get(), &mouseX, &mouseY);
+	io.MousePos = ImVec2(static_cast<float>(mouseX), static_cast<float>(mouseY));
+
+	// Set mouse button states
+	io.MouseDown[0] = glfwGetMouseButton(window.get(), GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
+	io.MouseDown[1] = glfwGetMouseButton(window.get(), GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS;
+	io.MouseDown[2] = glfwGetMouseButton(window.get(), GLFW_MOUSE_BUTTON_MIDDLE) == GLFW_PRESS;
 }
 
 void Window::renderImGui() {
