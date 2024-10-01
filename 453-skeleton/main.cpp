@@ -34,10 +34,12 @@
 
 
 // Variables to manage the GUI state
-int currentScene = 0; // Scene selector
-int fractalDepth = 10; // Depth/iteration of fractal shapes
-bool showGUI = true;  // Toggle GUI visibility
+int currentSceneGUI = 0; // Scene selector
+int fractalDepthGUI = 0; // Depth/iteration of fractal shapes
+//bool showGUI = true;  // Toggle GUI visibility
 
+
+/*
 // Scenes 
 enum SceneType {
 	SCENE_SIN_WAVE,
@@ -47,6 +49,7 @@ enum SceneType {
 	SCENE_DRAGON_CURVE,
 	SCENE_TOTAL // Count of scenes
 };
+*/
 
 
 /*
@@ -141,7 +144,7 @@ public:
 			}
 			if (key == GLFW_KEY_UP) { // if we press the up arrow the 't' parameter will increase a little
 				parameters.t += parameters.tStep;
-				parameters.iterations = std::min(parameters.iterations + 1, 20); // Cap at 11 iterations
+				parameters.iterations = std::min(parameters.iterations + 1, 10); // Cap at 10 iterations
 			}
 
 			if (key == GLFW_KEY_DOWN) { // if we press the down arrow the 't' parameter will decrease a little
@@ -164,9 +167,15 @@ public:
 		return parameters;
 	}
 
+	void setParameters(const Parameters& newParameters) {
+		parameters = newParameters;
+	}
+
+
 	int getFractalType() const {
 		return fractalType;
 	}
+
 
 private:
 	ShaderProgram& shader;
@@ -579,21 +588,9 @@ int main() {
 
 	Window window(800, 800, "CPSC 453 A1"); // can set callbacks at construction if desired
 
-	//GLFWwindow* window = glfwCreateWindow(800, 800, "CPSC 453 A1 GUI Window", nullptr, nullptr);  // Direct creation of the window
+	
+	window.setupImGui();  // SOURCE USED: https://www.youtube.com/watch?v=VRwhNKoxUtk&ab_channel=VictorGordan
 
-	//glfwMakeContextCurrent(window); // error, but I dont think I have to do this anyways
-
-	//ImGui_ImplGlfw_InitForOpenGL(window, true);  // Use the main window pointer
-
-	window.setupImGui();
-
-	//Window window(glfwWindow);
-	/*
-	*
-	GLFWwindow* windowNew = glfwCreateWindow(800, 600, "ImGui OpenGL", NULL, NULL); // A new GLFW window
-	glfwMakeContextCurrent(windowNew);  // Ensure the context is current
-	glfwSwapInterval(1);  // Enable vsync
-	*/
 
 	GLDebug::enable();
 
@@ -604,17 +601,6 @@ int main() {
 	auto callbacks = std::make_shared<MyCallbacks>(shader); // can also update callbacks to new ones
 	window.setCallbacks(callbacks);
 
-	
-	/*
-	// 5. Setup ImGui context in the same main OpenGL window context
-	ImGui::CreateContext();
-	ImGuiIO& io = ImGui::GetIO();
-	ImGui::StyleColorsDark();  // Set dark style
-
-	// Initialize ImGui for the same GLFW window and OpenGL context
-	ImGui_ImplGlfw_InitForOpenGL(windowNew, true);  // Use the main window pointer
-	ImGui_ImplOpenGL3_Init("#version 130");
-	*/
 
 	// GEOMETRY
 	CPU_Geometry cpuGeom;
@@ -643,14 +629,6 @@ int main() {
 	// Keeps running until user decides to press esc or something
 	// this loop runs EVERY frame
 
-	 // SOURCE USED: https://www.youtube.com/watch?v=VRwhNKoxUtk&ab_channel=VictorGordan
-	//IMGUI_CHECKVERSION();
-	//ImGui::CreateContext();
-	//ImGuiIO& io = ImGui::GetIO(); (void)io;
-	//ImGui::StyleColorsDark();
-	////ImGui_ImplGlfw_InitForOpenGL(window, true); // error
-	//ImGui_ImplOpenGL3_Init("#version 330");
-
 
 
 	while (!window.shouldClose()) {
@@ -660,24 +638,77 @@ int main() {
 		window.startImGuiFrame();
 
 
-		/*
+		
 		// Scene Selector
 		ImGui::Begin("Fractal Settings");
-		const char* scenes[] = { "Sierpinski Triangle", "Koch Snowflake", "Pythagoras Tree", "Dragon Curve" };
+		const char* scenes[] = { "Sin Wave", "Sierpinski Triangle", "Pythagoras Tree", "Koch Snowflake", "Dragon Curve" };
 		ImGui::Text("Select Scene:");
-		ImGui::Combo("##scene_selector", &currentScene, scenes, SCENE_TOTAL);
+		bool sceneChangedGUI = ImGui::Combo("##scene_selector", &currentSceneGUI, scenes, 5);
 		// Fractal Depth Slider
 		ImGui::Text("Fractal Depth:");
-		ImGui::SliderInt("##fractal_depth", &fractalDepth, 0, 10); // Set depth range from 0 to 10
+		bool depthChangedGUI = ImGui::SliderInt("##fractal_depth", &fractalDepthGUI, 0, 10); // Set depth range from 0 to 10
 		ImGui::End();
-		*/
-
 		
+	
 		Parameters newP = callbacks->getParameters();
 		int currentFractalType = callbacks->getFractalType();
 
-		if (currentFractalType != lastFractalType) {
+		//currentSceneGUI = lastFractalType; // to start
+
+
+
+		if (depthChangedGUI) {
+			std::cout << "Depth changed by GUI to: " << fractalDepthGUI << std::endl;
+			newP.iterations = fractalDepthGUI; // Cap at 10 iterations // FOR GUI, I THINK THIS IS WORKING AS EXPECTED.
+
+		}
+		else {
+			fractalDepthGUI = newP.iterations;
+			//std::cout << "Depth not changed by GUI. Depth is currently: " << fractalDepthGUI << std::endl;
+		}
+
+		if (sceneChangedGUI) {
+			std::cout << "Scene changed by GUI to: " << currentSceneGUI << std::endl;
+			currentFractalType = currentSceneGUI;
+		}
+		else {
+			currentSceneGUI = currentFractalType;
+			//std::cout << "Scene not changed by GUI. Scene is currently: " << currentSceneGUI << std::endl;
+		}
+
+
+		/*
+		// Update the scene based on GUI interaction
+		if (currentFractalType != currentSceneGUI || currentSceneGUI != currentFractalType) {
+			currentSceneGUI = currentFractalType;  // Set the GUI-selected fractal type in the callback
+			currentFractalType = currentSceneGUI;
+		}
+		*/
+
+		// the problem: if i click on scene_win_wave or anything in the drop down menu, it doesn't change currentFractalType until AFTER this loop, so I need to change it before
+
+		/*
+		switch (currentSceneGUI) {
+		case 0:
+			currentFractalType = 0;
+		case 1:
+			currentFractalType = 1;
+		case 2:
+			currentFractalType = 2;
+		case 3:
+			currentFractalType = 3;
+		case 4:
+			currentFractalType = 4;
+		default:
+			currentFractalType = lastFractalType;
+		}
+		*/
+		
+
+
+		if (depthChangedGUI || sceneChangedGUI || currentFractalType != lastFractalType) {
 			if (currentFractalType == 0) {
+				
 				for (float x = -1.0f; x <= 1.0f; x += 0.01f) {
 					cpuGeom.verts.push_back(glm::vec3(x, sin(x * 10) * 0.5, 0.0));
 					cpuGeom.cols.push_back(glm::vec3(cos(x), sin(x), 0.0));
@@ -685,19 +716,24 @@ int main() {
 				cpuGeom = generateSin(p);
 			}
 			else if (currentFractalType == 1) {
+
 				cpuGeom = generateSierpinski(p.iterations);
 			}
 			else if (currentFractalType == 2) {
+		
 				cpuGeom = generatePythagorasTree(p.iterations);
 			}
 			else if (currentFractalType == 3) {
+		
 				cpuGeom = generateKochSnowflake(p.iterations);
 			}
 
 			else if (currentFractalType == 4) {
+			
 				cpuGeom = generateDragonCurve(p.iterations);
 			}
 		}
+
 
 		if (currentFractalType == 0) {
 			if (newP.isDifferent(p)) { // if difference detected, then we will reupload things
@@ -723,6 +759,7 @@ int main() {
 				cpuGeom = generatePythagorasTree(p.iterations);
 				gpuGeom.setVerts(cpuGeom.verts);
 				gpuGeom.setCols(cpuGeom.cols);
+			
 			}
 		}
 
@@ -732,6 +769,7 @@ int main() {
 				cpuGeom = generateKochSnowflake(p.iterations);
 				gpuGeom.setVerts(cpuGeom.verts);
 				gpuGeom.setCols(cpuGeom.cols);
+				
 			}
 		}
 
@@ -788,17 +826,6 @@ int main() {
 			ImGui::End();
 			*/
 
-			
-			// Scene Selector
-			ImGui::Begin("Fractal Settings");
-			const char* scenes[] = { "Sin Wave", "Sierpinski Triangle", "Koch Snowflake", "Pythagoras Tree", "Dragon Curve" };
-			ImGui::Text("Select Scene:");
-			ImGui::Combo("##scene_selector", &currentScene, scenes, SCENE_TOTAL);
-			// Fractal Depth Slider
-			ImGui::Text("Fractal Depth:");
-			ImGui::SliderInt("##fractal_depth", &fractalDepth, 0, 10); // Set depth range from 0 to 10
-			ImGui::End();
-		
 
 
 			window.renderImGui();
