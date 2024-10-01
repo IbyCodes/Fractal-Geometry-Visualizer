@@ -31,67 +31,10 @@
 #include <stack>
 
 
-
-
 // Variables to manage the GUI state
 int currentSceneGUI = 0; // Scene selector
 int fractalDepthGUI = 0; // Depth/iteration of fractal shapes
-//bool showGUI = true;  // Toggle GUI visibility
 
-
-/*
-// Scenes 
-enum SceneType {
-	SCENE_SIN_WAVE,
-	SCENE_SIERPINSKI_TRIANGLE,
-	SCENE_PYTHAGORAS_TREE,
-	SCENE_KOCH_SNOWFLAKE,
-	SCENE_DRAGON_CURVE,
-	SCENE_TOTAL // Count of scenes
-};
-*/
-
-
-/*
-// Function to create the ImGui panel
-void renderImGui() {
-	
-	// Start ImGui frame
-	ImGui_ImplOpenGL3_NewFrame();
-	ImGui_ImplGlfw_NewFrame();
-	ImGui::NewFrame();
-
-
-	if (showGUI) {
-		// Create an ImGui window called "panel"
-		ImGui::Begin("panel");
-
-		// Scene Selector Dropdown
-		ImGui::Text("Scene Selector:");
-		const char* scenes[] = { "Sin Wave", "Sierpinski Triangle", "Pythagoras Tree", "Koch Snowflake", "Dragon Curve"};
-		ImGui::Combo("Scene Number", &currentScene, scenes, IM_ARRAYSIZE(scenes));
-
-		// Iteration Depth Slider
-		ImGui::Text("Fractal Depth:");
-		ImGui::SliderInt("Fractal Depth", &fractalDepth, 1, 10); // Depth from 1 to 10
-
-		// Toggle Button for GUI Visibility
-		if (ImGui::Button("Toggle GUI")) {
-			showGUI = !showGUI;
-		}
-
-		// Display some application stats (optional)
-		ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-
-		// End ImGui panel
-		ImGui::End();
-	}
-
-	// Render ImGui
-	ImGui::Render();
-	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-}
-*/
 
 
 struct Parameters { // struct for parameters for user input example
@@ -642,23 +585,19 @@ int main() {
 		window.startImGuiFrame();
 
 
-		
 		// Scene Selector
-		ImGui::Begin("Fractal Settings");
-		const char* scenes[] = { "Sin Wave", "Sierpinski Triangle", "Pythagoras Tree", "Koch Snowflake", "Dragon Curve" };
+		ImGui::Begin("Fractal Menu by Mohammad Khan");
+		const char* scenes[] = { "Sin Wave (part of tutorial template)", "Sierpinski Triangle", "Pythagoras Tree", "Koch Snowflake", "Dragon Curve" };
 		ImGui::Text("Select Scene:");
 		bool sceneChangedGUI = ImGui::Combo("##scene_selector", &currentSceneGUI, scenes, 5);
 		// Fractal Depth Slider
-		ImGui::Text("Fractal Depth:");
-		bool depthChangedGUI = ImGui::SliderInt("##fractal_depth", &fractalDepthGUI, 0, 10); // Set depth range from 0 to 10
+		ImGui::Text("Fractal Iteration:");
+		bool depthChangedGUI = ImGui::SliderInt("##fractal_depth", &fractalDepthGUI, 0, 10); // Setting iteration range from 0 to 10
 		ImGui::End();
 		
 	
 		Parameters newP = callbacks->getParameters();
 		int currentFractalType = callbacks->getFractalType();
-
-		//currentSceneGUI = lastFractalType; // to start
-
 
 
 		if (depthChangedGUI) {
@@ -668,48 +607,19 @@ int main() {
 		}
 		else {
 			fractalDepthGUI = newP.iterations;
-			//std::cout << "Depth not changed by GUI. Depth is currently: " << fractalDepthGUI << std::endl;
 		}
 
 		if (sceneChangedGUI) {
 			std::cout << "Scene changed by GUI to: " << currentSceneGUI << std::endl;
 			currentFractalType = currentSceneGUI;
+			newP.iterations = 0; // to avoid crashing
 		}
 		else {
 			currentSceneGUI = currentFractalType;
-			//std::cout << "Scene not changed by GUI. Scene is currently: " << currentSceneGUI << std::endl;
 		}
 
-		callbacks->setParameters(newP);
-		callbacks->setFractalType(currentSceneGUI);
-
-		/*
-		// Update the scene based on GUI interaction
-		if (currentFractalType != currentSceneGUI || currentSceneGUI != currentFractalType) {
-			currentSceneGUI = currentFractalType;  // Set the GUI-selected fractal type in the callback
-			currentFractalType = currentSceneGUI;
-		}
-		*/
-
-		// the problem: if i click on scene_win_wave or anything in the drop down menu, it doesn't change currentFractalType until AFTER this loop, so I need to change it before
-
-		/*
-		switch (currentSceneGUI) {
-		case 0:
-			currentFractalType = 0;
-		case 1:
-			currentFractalType = 1;
-		case 2:
-			currentFractalType = 2;
-		case 3:
-			currentFractalType = 3;
-		case 4:
-			currentFractalType = 4;
-		default:
-			currentFractalType = lastFractalType;
-		}
-		*/
-		
+		callbacks->setParameters(newP);  // FINALLY WORKING GUI INPUTS
+		callbacks->setFractalType(currentSceneGUI); // FINALLY WORKING GUI INPUTS
 
 
 		if (depthChangedGUI || sceneChangedGUI || currentFractalType != lastFractalType) {
@@ -818,32 +728,11 @@ int main() {
 
 			glDisable(GL_FRAMEBUFFER_SRGB); // disable sRGB for things like imgui
 
-			/*
-			ImGui::Begin("Test Window");
-			ImGui::Button("Click Me");
-			ImGui::Text("If you can click this button, inputs are working correctly.");
-			ImGui::End();
-
-			*/
-			/*
-			// Your ImGui code here
-			ImGui::Begin("Hello, World!");
-			ImGui::Text("This is a basic ImGui window!");
-			ImGui::End();
-			*/
-
-
-
 			window.renderImGui();
 
 
-
-			//ImGui::Render();
-			//ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
 			window.swapBuffers(); // we're using a dual buffer system, so once we're done drawing on one buffer we swap it
 		}
-
 
 
 	// NOTE: openGL likes a counter-clockwise order format, so try to draw vertices via counter-clockwise order
