@@ -176,6 +176,10 @@ public:
 		return fractalType;
 	}
 
+	void setFractalType(int const fractalInput) {
+		fractalType = fractalInput;
+	}
+
 
 private:
 	ShaderProgram& shader;
@@ -659,7 +663,7 @@ int main() {
 
 		if (depthChangedGUI) {
 			std::cout << "Depth changed by GUI to: " << fractalDepthGUI << std::endl;
-			newP.iterations = fractalDepthGUI; // Cap at 10 iterations // FOR GUI, I THINK THIS IS WORKING AS EXPECTED.
+			newP.iterations = fractalDepthGUI; // Cap at 10 iterations // FOR GUI, I THINK THIS IS WORKING AS EXPECTED.	
 
 		}
 		else {
@@ -676,6 +680,8 @@ int main() {
 			//std::cout << "Scene not changed by GUI. Scene is currently: " << currentSceneGUI << std::endl;
 		}
 
+		callbacks->setParameters(newP);
+		callbacks->setFractalType(currentSceneGUI);
 
 		/*
 		// Update the scene based on GUI interaction
