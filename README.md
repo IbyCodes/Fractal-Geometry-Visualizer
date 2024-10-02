@@ -4,11 +4,11 @@ Microsoft Visual Studio
 
 ## Keyboard Controls
 
-Generate Sin Wave: NUMPAD 0
-Generate Sierpinski Triangle: NUMPAD 1
-Generate Pythagoras Tree: NUMPAD 2
-Generate Koch Snowflake: NUMPAD 3
-Generate Dragon Curve: NUMPAD 4
+Generate Sin Wave: 0
+Generate Sierpinski Triangle: 1
+Generate Pythagoras Tree: 2
+Generate Koch Snowflake: 3
+Generate Dragon Curve: 4
 
 ## Iteration Control
 
