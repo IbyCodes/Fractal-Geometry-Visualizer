@@ -120,8 +120,9 @@ glm::ivec2 Window::getSize() const {
 
 
 // ImGui integration functions
+// SOURCE USED for all GUI code: https://www.youtube.com/watch?v=VRwhNKoxUtk&ab_channel=VictorGordan
+
 void Window::setupImGui() {
-	//glfwMakeContextCurrent(window.get()); 
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
 	ImGui::StyleColorsDark();
@@ -133,7 +134,7 @@ void Window::setupImGui() {
 	// Set GLFW input mode for ImGui
 	glfwSetInputMode(window.get(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 
-	// Ensure that ImGui captures all mouse/keyboard inputs
+	// Ensure that ImGui captures all mouse/keyboard inputs (not 100% sure if needed, but will keep just in case)
 	ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 	ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
 }
@@ -150,7 +151,7 @@ void Window::startImGuiFrame() {
 	glfwGetCursorPos(window.get(), &mouseX, &mouseY);
 	io.MousePos = ImVec2(static_cast<float>(mouseX), static_cast<float>(mouseY));
 
-	// Set mouse button states (source: GPT)
+	// Setting mouse button states (source: GPT 4.0)
 	io.MouseDown[0] = glfwGetMouseButton(window.get(), GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
 	io.MouseDown[1] = glfwGetMouseButton(window.get(), GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS;
 	io.MouseDown[2] = glfwGetMouseButton(window.get(), GLFW_MOUSE_BUTTON_MIDDLE) == GLFW_PRESS;
