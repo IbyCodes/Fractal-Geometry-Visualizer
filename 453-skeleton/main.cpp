@@ -1,5 +1,5 @@
 // CPSC 453 Assignment 1
-// Mohammad Khan 30103764
+// Mohammad Ibrahim Khan 30103764
 
 // NOTES FOR MYSELF:
 // LEARNOPENGL - GOOD SITE TO learn how to draw things properly
@@ -30,9 +30,7 @@
 #include <glm/glm.hpp>
 #include <cmath>
 #define M_PI 3.14159265358979323846 // PI
-#include <vector>
-#include <functional>
-#include <glm/gtc/matrix_transform.hpp> // For transformations
+
 
 // PLEASE NOTE: some code is to do with the sin wave from the tutorial video on D2L, I decided to build on top of that code and kept that shape in my assignment! You may ignore it if you wish.
 
@@ -110,6 +108,7 @@ public:
 			}
 
 		}
+
 	}
 
 	Parameters getParameters() { // getter function to get parameters
@@ -170,7 +169,6 @@ glm::vec3 blend(const glm::vec3& c1, const glm::vec3& c2, float ratio) {
 CPU_Geometry generateSierpinski(int iterations) { // function to generate the sierpinksi triangle
 	CPU_Geometry cpuGeom;
 
-	
 	/*
 	// function to subdivide the sierpinksi triangle fractal (followed this pseudocode for shape, from CPSC 453 notes on D2L)
 	void divide_triangle(glm::vec3 pointA, glm::vec3 pointB, glm::vec3 pointC, int m) {
@@ -259,7 +257,6 @@ CPU_Geometry generateSierpinski(int iterations) { // function to generate the si
 
 	return cpuGeom;
 }
-
 
 
 
@@ -367,7 +364,9 @@ CPU_Geometry generatePythagorasTree(int iterations) { // Main function to genera
 
 
 
-CPU_Geometry generateKochSnowflake(int depth) { // main function to generate the Koch Snowflake
+// sources I used to help guide for this: https://gofiguremath.org/fractals/koch-snowflake/, https://en.wikipedia.org/wiki/Koch_snowflake#:~:text=The%20Koch%20snowflake%20can%20be%20constructed%20by%20starting%20with%20an,its%20base%20and%20points%20outward.
+
+CPU_Geometry generateKochSnowflake(int depth) { // main function to generate the Koch Snowflake, sierpinksi triangle code helped out a little
 	CPU_Geometry cpuGeom;
 
 	// Recursive function to divide and create the Koch snowflake + color it
@@ -419,11 +418,10 @@ CPU_Geometry generateKochSnowflake(int depth) { // main function to generate the
 
 
 
-// sources used to help for this dragon curve: https://rosettacode.org/wiki/Dragon_curve, https://www.csharphelper.com/howtos/howto_heighway_dragon.html, https://tfetimes.com/c-dragon-curve/
 
+// sources used to help for this dragon curve: https://rosettacode.org/wiki/Dragon_curve, https://www.csharphelper.com/howtos/howto_heighway_dragon.html, https://tfetimes.com/c-dragon-curve/
 // Defining directions for easy understanding
 enum Directions { NORTH = 0, EAST, SOUTH, WEST };
-
 
 CPU_Geometry generateDragonCurve(int iterations) { // main function to draw the dragon curve
 	CPU_Geometry cpuGeometry;
@@ -517,7 +515,7 @@ CPU_Geometry generateDragonCurve(int iterations) { // main function to draw the 
 		glm::vec2 startPoint = pointsList[i];
 		glm::vec2 endPoint = pointsList[i + 1];
 
-		// Inverting X-coordinates for visualization (so it looks exactly like the assignment description)
+		// Inverting X-coordinates for visualization (so it looks exactly like the assignment requires)
 		startPoint.x = -startPoint.x;
 		endPoint.x = -endPoint.x;
 
@@ -590,7 +588,7 @@ int main() {
 		glfwPollEvents();
 
 
-		window.startImGuiFrame(); // from window.cpp 
+		window.startImGuiFrame(); // from window.cpp, loading GUI
 
 
 		// Scene Selector 
@@ -630,14 +628,7 @@ int main() {
 		callbacks->setFractalType(currentSceneGUI); // to update to the new scene
 
 
-		if (depthChangedGUI || sceneChangedGUI || currentFractalType != lastFractalType) {
-
-			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-
-			cpuGeom.verts.clear(); // to avoid any weird shapes in between switching shapes
-			cpuGeom.cols.clear(); // to avoid any weird shapes in between switching shapes
-
-
+		if (depthChangedGUI || sceneChangedGUI || currentFractalType != lastFractalType) { // if any change is detected at all in the GUI parameters+scene or with the keyboard control for changing scenes, we will refresh the window
 
 			if (currentFractalType == 0) {
 				
@@ -646,32 +637,43 @@ int main() {
 					cpuGeom.cols.push_back(glm::vec3(cos(x), sin(x), 0.0));
 				}
 				cpuGeom = generateSin(p);
+				gpuGeom.setVerts(cpuGeom.verts);
+				gpuGeom.setCols(cpuGeom.cols);
 			}
 
 			else if (currentFractalType == 1) {
 
 				cpuGeom = generateSierpinski(p.iterations);
+				gpuGeom.setVerts(cpuGeom.verts);
+				gpuGeom.setCols(cpuGeom.cols);
 			}
 
 			else if (currentFractalType == 2) {
 		
 				cpuGeom = generatePythagorasTree(p.iterations);
+				gpuGeom.setVerts(cpuGeom.verts);
+				gpuGeom.setCols(cpuGeom.cols);
 			}
 
 			else if (currentFractalType == 3) {
 		
 				cpuGeom = generateKochSnowflake(p.iterations);
+				gpuGeom.setVerts(cpuGeom.verts);
+				gpuGeom.setCols(cpuGeom.cols);
 			}
 
 			else if (currentFractalType == 4) {
 			
 				cpuGeom = generateDragonCurve(p.iterations);
+				gpuGeom.setVerts(cpuGeom.verts);
+				gpuGeom.setCols(cpuGeom.cols);
 			}
 		}
 
 
+		// note here I tried to use a switch statement to shorten code but it began to slow down the performance so I stuck to if-else statements for optimal performance!
 		if (currentFractalType == 0) {
-			if (newP.isDifferent(p)) { // if difference detected, then we will reupload things
+			if (newP.isDifferent(p)) { // if difference detected in parameters, then we will reupload things (this was required for me to remove any weird shapes in between switching shape scenes)
 				p = newP;
 				cpuGeom = generateSin(p);
 				gpuGeom.setVerts(cpuGeom.verts);
@@ -734,15 +736,15 @@ int main() {
 			}
 
 			if (currentFractalType == 2) {
-				glDrawArrays(GL_TRIANGLES, 0, GLsizei(cpuGeom.verts.size())); // drawing on the buffer (tree)
+				glDrawArrays(GL_TRIANGLES, 0, GLsizei(cpuGeom.verts.size())); // drawing on the buffer (tree fractal)
 			}
 
 			if (currentFractalType == 3) {
-				glDrawArrays(GL_LINE_LOOP , 0, GLsizei(cpuGeom.verts.size())); // drawing on the buffer (snowflake)
+				glDrawArrays(GL_LINE_LOOP , 0, GLsizei(cpuGeom.verts.size())); // drawing on the buffer (snowflake fractal)
 			}
 
 			if (currentFractalType == 4) {
-				glDrawArrays(GL_LINE_STRIP, 0, GLsizei(cpuGeom.verts.size())); // drawing on the buffer (dragon curve)
+				glDrawArrays(GL_LINE_STRIP, 0, GLsizei(cpuGeom.verts.size())); // drawing on the buffer (dragon curve fractal)
 			}
 
 			glDisable(GL_FRAMEBUFFER_SRGB); // disable sRGB for things like imgui
