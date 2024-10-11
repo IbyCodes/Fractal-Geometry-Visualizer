@@ -1,7 +1,5 @@
 # Fractal Geometry Visualizer <br>
-Mohammad Ibrahim Khan <br>
-Built on Windows 10 <br>
-Microsoft Visual Studio <br>
+Mohammad Ibrahim Khan **|** Built on Windows 10 **|** Microsoft Visual Studio <br>
 
 ## Keyboard Controls
 
