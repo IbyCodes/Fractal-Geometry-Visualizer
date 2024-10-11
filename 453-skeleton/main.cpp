@@ -540,7 +540,7 @@ int main() {
 	// WINDOW
 	glfwInit(); // we are using glfw, a openGL library
 
-	Window window(800, 800, "CPSC 453 A1"); // can set callbacks at construction if desired
+	Window window(800, 800, "Fractal Geometry Visualizer"); // can set callbacks at construction if desired
 
 	
 	window.setupImGui();  // SOURCE USED for all GUI code: https://www.youtube.com/watch?v=VRwhNKoxUtk&ab_channel=VictorGordan
