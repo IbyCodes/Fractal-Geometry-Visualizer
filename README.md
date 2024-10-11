@@ -1,7 +1,7 @@
-Fractal Geometry Visualizer \n
-Mohammad Ibrahim Khan \n
-Built on Windows 10 \n
-Microsoft Visual Studio \n
+Fractal Geometry Visualizer <br>
+Mohammad Ibrahim Khan <br>
+Built on Windows 10 <br>
+Microsoft Visual Studio <br>
 
 ## Keyboard Controls
 
