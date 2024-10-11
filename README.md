@@ -1,4 +1,5 @@
-Mohammad Ibrahim Khan 453-Assignment #1
+Fractal Geometry Visualizer
+Mohammad Ibrahim Khan
 Built on Windows 10 
 Microsoft Visual Studio
 
