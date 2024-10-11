@@ -1,4 +1,4 @@
-Fractal Geometry Visualizer <br>
+# Fractal Geometry Visualizer <br>
 Mohammad Ibrahim Khan <br>
 Built on Windows 10 <br>
 Microsoft Visual Studio <br>
