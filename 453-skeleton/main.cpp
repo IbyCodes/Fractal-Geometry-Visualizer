@@ -1,5 +1,5 @@
-// CPSC 453 Assignment 1
-// Mohammad Ibrahim Khan 30103764
+// Fractal Geometry Visualizer
+// Mohammad Ibrahim Khan
 
 // NOTES FOR MYSELF:
 // LEARNOPENGL - GOOD SITE TO learn how to draw things properly
