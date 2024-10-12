@@ -25,18 +25,18 @@ U Step Increase: ARROW KEY RIGHT
 
 Note: The U Step control is not fully implemented for other shapes.
 
-Sin Wave
+### Sin Wave
 ![](https://github.com/IbyCodes/Fractal-Geometry-Visualizer/blob/master/sinwave.gif)
 
-Sierpinksi Triangle
+### Sierpinksi Triangle
+![](https://github.com/IbyCodes/Fractal-Geometry-Visualizer/blob/master/triangle.gif)
 
+### Pythagoras Tree
+![](https://github.com/IbyCodes/Fractal-Geometry-Visualizer/blob/master/tree.gif)
 
-Pythagoras Tree
+### Koch Snowflake
+![](https://github.com/IbyCodes/Fractal-Geometry-Visualizer/blob/master/snowflake.gif)
 
-
-Koch Snowflake
-
-
-Dragon Curve
-
+### Dragon Curve
+![](https://github.com/IbyCodes/Fractal-Geometry-Visualizer/blob/master/dragoncurve.gif)
 
